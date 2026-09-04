@@ -1,0 +1,45 @@
+# Experiment 001 — Naive Baseline
+# Frozen parameters. Do not edit. To propose a change, write a new experiment
+# under docs/experiments/exp_NNN_<name>/ with a diff against this file.
+
+experiment_id: exp_001_naive_baseline
+description: "Naive 512/50 fixed-size chunking + ChromaDB + dense retrieval + Gemini 2.5 Flash"
+
+chunker:
+  name: naive
+  chunk_size_tokens: 512
+  chunk_overlap_tokens: 50
+  encoding: cl100k_base
+
+embedder:
+  backend: vertex           # or "mock" for offline runs
+  model: text-embedding-005
+  dim: 768
+
+vectordb:
+  backend: chroma
+  persist_dir: ./data/chroma
+  collection_name: finrag_chunks
+  distance: cosine
+
+retriever:
+  name: dense
+  top_k: 5
+
+generator:
+  backend: vertex           # or "mock" for offline runs
+  model: gemini-2.5-flash
+  temperature: 0.0          # greedy for reproducibility
+  max_output_tokens: 1024
+
+eval:
+  set_path: tests/eval/qa_pairs.jsonl
+  metrics:
+    - hit_at_5
+    - mrr
+    - ragas:context_recall
+    - ragas:faithfulness
+    - ragas:answer_relevancy
+    - latency:p50_ms
+    - latency:p95_ms
+    - cost:usd_per_query

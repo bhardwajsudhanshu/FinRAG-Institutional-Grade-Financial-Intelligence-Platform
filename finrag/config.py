@@ -1,0 +1,84 @@
+"""Centralized configuration loaded from .env via pydantic-settings.
+
+All env vars are documented in `.env.example`. To override on a per-run basis,
+set the env var in your shell before invoking `uv run ...`.
+"""
+
+from __future__ import annotations
+
+from functools import lru_cache
+from pathlib import Path
+
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator
+
+
+class Settings(BaseSettings):
+    """Application settings, loaded from .env + environment variables."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    # --- GCP / Vertex AI ---
+    gcp_project_id: str = ""
+    gcp_region: str = "us-central1"
+
+    # --- Embedder / Generator backends ---
+    embedder_backend: str = Field(default="mock", description="'mock' or 'vertex'")
+    generator_backend: str = Field(default="mock", description="'mock' or 'vertex'")
+
+    # Vertex model IDs
+    vertex_embedding_model: str = "text-embedding-005"
+    vertex_generator_model: str = "gemini-2.5-flash"
+    vertex_eval_generator_model: str = "gemini-2.5-pro"
+
+    # --- Chunking ---
+    chunk_size_tokens: int = 512
+    chunk_overlap_tokens: int = 50
+
+    # --- Vector DB ---
+    vectordb_backend: str = "chroma"
+    chroma_persist_dir: Path = Path("./data/chroma")
+
+    # --- Retrieval ---
+    retrieval_top_k: int = 5
+    embedding_dim: int = 768
+
+    # --- Logging / cost tracking ---
+    cost_log_path: Path = Path("./data/runtime_costs.jsonl")
+    log_level: str = "INFO"
+
+    # --- Data ---
+    data_raw_dir: Path = Path("./data/raw")
+    data_processed_dir: Path = Path("./data/processed")
+
+    # --- Project layout ---
+    project_root: Path = Path(__file__).resolve().parent.parent
+
+    @field_validator("chroma_persist_dir", "cost_log_path", "data_raw_dir", "data_processed_dir", mode="before")
+    @classmethod
+    def _coerce_path(cls, v):
+        """Pydantic-settings returns strings for non-annotated fields; convert to Path."""
+        if v is None or v == "":
+            return v
+        return Path(v) if not isinstance(v, Path) else v
+
+    def ensure_dirs(self) -> None:
+        """Create directories that must exist for the app to run."""
+        for d in [self.data_raw_dir, self.data_processed_dir, self.chroma_persist_dir]:
+            d.mkdir(parents=True, exist_ok=True)
+        # Cost log parent
+        self.cost_log_path.parent.mkdir(parents=True, exist_ok=True)
+
+
+@lru_cache(maxsize=1)
+def get_settings() -> Settings:
+    """Cached settings singleton."""
+    s = Settings()
+    s.ensure_dirs()
+    return s

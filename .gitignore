@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments (project-local on F:, never commit)
+.venv/
+venv/
+env/
+
+# uv cache redirect (lives on F: at F:/.uv-cache — see Makefile/env)
+# nothing to gitignore here
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+secrets/
+*.json.enc
+service-account*.json
+
+# Data (large files, regenerable)
+data/raw/
+data/processed/
+data/chroma/
+data/embeddings_cache/
+data/runtime_costs.jsonl
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# OS
+*~
+.fuse_hidden*
+
+# Logs
+*.log
+logs/

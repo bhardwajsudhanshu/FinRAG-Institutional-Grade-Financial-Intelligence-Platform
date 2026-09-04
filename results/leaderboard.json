@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "last_updated": "2026-09-05",
+  "categories": {
+    "chunking": {
+      "winner": "exp_001_naive_baseline",
+      "runner_up": null,
+      "metric": "context_recall"
+    },
+    "vectordb": {
+      "winner": "exp_001_naive_baseline",
+      "runner_up": null,
+      "metric": "p95_latency_ms"
+    },
+    "retrieval": {
+      "winner": "exp_001_naive_baseline",
+      "runner_up": null,
+      "metric": "context_recall"
+    },
+    "reranker": {
+      "winner": null,
+      "runner_up": null,
+      "metric": "hit_at_10"
+    },
+    "end_to_end": {
+      "winner": "exp_001_naive_baseline",
+      "runner_up": null,
+      "metric": "faithfulness"
+    }
+  },
+  "experiments": []
+}
