@@ -1,0 +1,2 @@
+exp_name,timestamp,n_questions,n_filings,n_chunks,context_recall,faithfulness,answer_relevancy,hit_at_5,citation_accuracy,mean_latency_ms,total_cost_usd
+exp_001_smoke_v2,2026-09-05T06:46:31,10,2,229,,,,0.7,0.7,7001.5,0.0029440499999999997

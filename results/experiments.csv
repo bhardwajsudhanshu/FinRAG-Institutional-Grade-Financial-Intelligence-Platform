@@ -1,1 +1,2 @@
-experiment_id,category,metric,value,date,notes
+exp_name,timestamp,n_questions,n_filings,n_chunks,context_recall,faithfulness,answer_relevancy,hit_at_5,citation_accuracy,mean_latency_ms,total_cost_usd
+exp_001_naive_baseline,2026-09-05T07:45:04,139,20,4447,0.8057851239669421,0.884705922936188,0.7428004124656576,0.60431654676259,0.5611510791366906,8731.791366906475,0.03807052499999999

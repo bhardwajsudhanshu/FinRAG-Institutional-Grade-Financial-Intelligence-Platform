@@ -12,11 +12,15 @@ help: ## Show this help
 env: ## Create venv on F: drive and install deps
 	uv venv .venv --python 3.11
 	uv sync --extra dev --extra eval --extra vectordbs
+	uv run python scripts/patch_langchain_vertexai_shim.py
 
 install: env ## Alias for `make env`
 
 vertex-check: ## Verify Vertex AI auth is wired correctly
 	uv run python scripts/test_vertex_auth.py
+
+patch-ragas: ## Re-apply the langchain_community.chat_models.vertexai shim
+	uv run python scripts/patch_langchain_vertexai_shim.py
 
 # --- Common workflows -------------------------------------------------------
 ingest: ## Ingest all 20 tickers × 3 years from SEC EDGAR
@@ -30,6 +34,22 @@ query: ## Ask a question (usage: make query Q="What was Apple's revenue in FY202
 
 eval: ## Run exp_001 baseline against the eval set
 	uv run python -m finrag.cli.eval --exp exp_001_naive_baseline
+
+eval-smoke: ## Run eval on the first 5 Q's (no full eval set required)
+	uv run python -m finrag.cli.eval --exp exp_001_smoke --qa-path data/eval/qa_pairs_smoke.jsonl --out-csv results/smoke_experiments.csv --top-k 5
+
+eval-nightly: ## Full eval run + leaderboard refresh (for nightly cron)
+	uv run python -m finrag.cli.eval --exp exp_001_naive_baseline
+	uv run python tests/eval/update_leaderboard.py
+
+leaderboard: ## Rebuild results/leaderboard.json from results/experiments.csv
+	uv run python tests/eval/update_leaderboard.py
+
+qa-gen: ## Generate the 200-Q eval set (slow, ~80 min on Vertex)
+	uv run python tests/eval/generate_qa_pairs.py
+
+qa-gen-smoke: ## Generate a 2-Q smoke eval set
+	uv run python tests/eval/generate_qa_pairs.py --limit 1 --per-filing 5 --out data/eval/qa_pairs_smoke.jsonl
 
 ui: ## Launch the Streamlit dashboard
 	uv run streamlit run ui/streamlit_app.py
@@ -50,6 +70,9 @@ docker-logs: ## Tail docker logs
 # --- Dev hygiene ------------------------------------------------------------
 test: ## Run tests
 	uv run pytest -ra
+
+test-eval: ## Run eval unit tests (fast, no Vertex calls)
+	uv run pytest tests/eval/test_ragas_runner.py -v
 
 lint: ## Lint with ruff
 	uv run ruff check finrag/ tests/

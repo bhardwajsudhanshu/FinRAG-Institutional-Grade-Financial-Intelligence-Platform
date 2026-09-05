@@ -1,19 +1,21 @@
 {
   "schema_version": "1.0",
-  "last_updated": "2026-09-05",
+  "last_updated": "2026-09-05T07:45:04",
   "categories": {
     "chunking": {
       "winner": "exp_001_naive_baseline",
+      "winner_value": 0.8057851239669421,
       "runner_up": null,
       "metric": "context_recall"
     },
     "vectordb": {
-      "winner": "exp_001_naive_baseline",
+      "winner": null,
       "runner_up": null,
       "metric": "p95_latency_ms"
     },
     "retrieval": {
       "winner": "exp_001_naive_baseline",
+      "winner_value": 0.8057851239669421,
       "runner_up": null,
       "metric": "context_recall"
     },
@@ -24,9 +26,23 @@
     },
     "end_to_end": {
       "winner": "exp_001_naive_baseline",
+      "winner_value": 0.884705922936188,
       "runner_up": null,
       "metric": "faithfulness"
     }
   },
-  "experiments": []
+  "experiments": [
+    {
+      "exp_name": "exp_001_naive_baseline",
+      "timestamp": "2026-09-05T07:45:04",
+      "n_questions": 139.0,
+      "context_recall": 0.8057851239669421,
+      "faithfulness": 0.884705922936188,
+      "answer_relevancy": 0.7428004124656576,
+      "hit_at_5": 0.60431654676259,
+      "citation_accuracy": 0.5611510791366906,
+      "mean_latency_ms": 8731.791366906475,
+      "total_cost_usd": 0.03807052499999999
+    }
+  ]
 }

@@ -57,6 +57,11 @@ dev = [
 eval = [
     "ragas>=0.1.0",
     "datasets>=2.18",
+    # langchain-community 0.4+ removed chat_models.vertexai. Ragas 0.4.3 still
+    # imports ChatVertexAI from that path. langchain-google-vertexai is the
+    # official migration target (see langchain-community issue #674); we shim
+    # the old import path in scripts/patch_langchain_vertexai_shim.py.
+    "langchain-google-vertexai>=2.0",
 ]
 # Optional vector DBs (docker-compose runs them, but Python clients are optional)
 vectordbs = [

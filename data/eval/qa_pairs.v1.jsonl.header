@@ -1,0 +1,1 @@
+{"_header": true, "eval_set_version": "v1", "eval_set_n_qa": 139, "eval_set_sha256": "2dced63fbd22", "eval_set_frozen_date": "2026-09-05", "distribution": {"lookup": 67, "section": 45, "out_of_scope": 18, "synthesis": 9}, "tickers_covered": 20, "adr": "docs/decisions/adr_003_eval_methodology.md"}

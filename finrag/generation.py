@@ -184,3 +184,86 @@ def get_generator() -> BaseGenerator:
             region=settings.gcp_region,
         )
     raise ValueError(f"Unknown generator backend: {settings.generator_backend!r}")
+
+
+# --- Generic Vertex LLM client for eval-time tasks -------------------------
+# This is intentionally separate from BaseGenerator: the Q-generation task
+# needs (a) structured JSON output, (b) different model (gemini-2.5-pro),
+# (c) its own cost-tracking bucket. The chat-style BaseGenerator above is
+# the user-facing answer generator; this is for build-time/eval-time work.
+
+def get_eval_llm() -> "EvalLLM":
+    """Return a generic Vertex LLM client for eval-time structured generation."""
+    settings = get_settings()
+    if not settings.gcp_project_id:
+        raise RuntimeError(
+            "Eval LLM needs GCP_PROJECT_ID. Set it in .env or set EMBEDDER_BACKEND=mock "
+            "and run the eval set with mock (not recommended)."
+        )
+    return EvalLLM(
+        model_id=settings.vertex_eval_generator_model,
+        project_id=settings.gcp_project_id,
+        region=settings.gcp_region,
+    )
+
+
+class EvalLLM:
+    """Thin wrapper over Gemini for eval-time structured generation.
+
+    Not part of the user-facing RAG pipeline. Used only by scripts under
+    `tests/eval/` (Q generation, RAGAS metric computation).
+    """
+
+    def __init__(self, model_id: str, project_id: str, region: str):
+        self._model_id = model_id
+        self._project_id = project_id
+        self._region = region
+        import vertexai  # type: ignore
+        from vertexai.generative_models import GenerativeModel  # type: ignore
+
+        vertexai.init(project=project_id, location=region)
+        import os
+        os.environ.setdefault("GOOGLE_CLOUD_QUOTA_PROJECT", project_id)
+        self._client = GenerativeModel(
+            model_id,
+            generation_config={"response_mime_type": "application/json", "temperature": 0.2},
+        )
+
+    @property
+    def model_id(self) -> str:
+        return self._model_id
+
+    def generate_json(self, prompt: str, max_retries: int = 2) -> tuple[dict, int, int]:
+        """Generate a JSON response. Returns (parsed_dict, input_tokens, output_tokens).
+
+        Retries on JSON parse errors with a corrective instruction.
+        """
+        last_err: Exception | None = None
+        for attempt in range(max_retries + 1):
+            in_tok, out_tok = 0, 0
+            with record_call("eval_generate", self._model_id) as rec:
+                if attempt > 0:
+                    # On retry, add a corrective suffix to the prompt
+                    response = self._client.generate_content(
+                        prompt + "\n\nREMINDER: respond with valid JSON only, no prose."
+                    )
+                else:
+                    response = self._client.generate_content(prompt)
+                usage = getattr(response, "usage_metadata", None)
+                if usage is not None:
+                    in_tok = int(getattr(usage, "prompt_token_count", 0) or 0)
+                    out_tok = int(getattr(usage, "candidates_token_count", 0) or 0)
+                    rec["input_tokens"] = in_tok
+                    rec["output_tokens"] = out_tok
+            try:
+                import json
+                data = json.loads(response.text)
+                if not isinstance(data, dict):
+                    raise ValueError(f"Expected JSON object, got {type(data).__name__}")
+                return data, in_tok, out_tok
+            except Exception as e:
+                last_err = e
+                logger.warning(f"EvalLLM JSON parse failed (attempt {attempt + 1}): {e}")
+        raise RuntimeError(
+            f"EvalLLM.generate_json failed after {max_retries + 1} attempts: {last_err}"
+        )
