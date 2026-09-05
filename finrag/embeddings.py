@@ -94,8 +94,18 @@ class VertexEmbedder(BaseEmbedder):
         self._project_id = project_id
         self._region = region
         # Lazy import so mock-only installs don't require google-cloud-aiplatform
+        import vertexai  # type: ignore
         from vertexai.language_models import TextEmbeddingModel  # type: ignore
 
+        # CRITICAL: vertexai.init must be called with the same project as the
+        # service account, otherwise the SDK falls back to ADC (gcloud user
+        # creds) and you get a 403 SERVICE_DISABLED because no quota project
+        # is set on those creds.
+        vertexai.init(project=project_id, location=region)
+        # Set the quota project so the embedding API call doesn't 403. The
+        # service-account key doesn't carry quota_project_id by default.
+        import os
+        os.environ.setdefault("GOOGLE_CLOUD_QUOTA_PROJECT", project_id)
         self._client = TextEmbeddingModel.from_pretrained(model_id)
 
     @property
@@ -112,14 +122,22 @@ class VertexEmbedder(BaseEmbedder):
         return list(embeddings[0].values)
 
     def embed_batch(self, texts: list[str]) -> list[list[float]]:
-        # Vertex supports batch embedding in a single API call
+        # Vertex AI's get_embeddings accepts a list, but the total input
+        # across all items in one call is capped (~20K tokens for
+        # text-embedding-005). With 512-token chunks we can safely batch
+        # up to 20 items per call. Anything bigger hits a 400.
+        MAX_ITEMS_PER_CALL = 20
         # Approximate tokens for cost estimation (1 token ~= 4 chars for English)
         total_chars = sum(len(t) for t in texts)
         est_tokens = max(1, total_chars // 4)
+        all_embeddings: list[list[float]] = []
         with record_call("embed_batch", self._model_id, input_tokens=est_tokens) as rec:
-            embeddings = self._client.get_embeddings(texts)
+            for start in range(0, len(texts), MAX_ITEMS_PER_CALL):
+                batch = texts[start : start + MAX_ITEMS_PER_CALL]
+                embeddings = self._client.get_embeddings(batch)
+                all_embeddings.extend(list(e.values) for e in embeddings)
         rec["batch_size"] = len(texts)
-        return [list(e.values) for e in embeddings]
+        return all_embeddings
 
 
 def get_embedder() -> BaseEmbedder:

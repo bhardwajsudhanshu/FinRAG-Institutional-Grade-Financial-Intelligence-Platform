@@ -120,8 +120,16 @@ class VertexGenerator(BaseGenerator):
         self._model_id = model_id
         self._project_id = project_id
         self._region = region
+        import vertexai  # type: ignore
         from vertexai.generative_models import GenerativeModel  # type: ignore
 
+        # CRITICAL: vertexai.init must run before any model call so the SDK
+        # uses the service-account creds, not ADC fallback (gcloud user creds,
+        # which have no quota project and return 403 SERVICE_DISABLED).
+        vertexai.init(project=project_id, location=region)
+        # Service-account creds don't carry a quota project; set it explicitly.
+        import os
+        os.environ.setdefault("GOOGLE_CLOUD_QUOTA_PROJECT", project_id)
         self._client = GenerativeModel(model_id)
 
     @property
@@ -138,13 +146,20 @@ class VertexGenerator(BaseGenerator):
             f"Question: {question}\n\n"
             f"Answer:"
         )
+        in_tok = 0
+        out_tok = 0
         with record_call("generate", self._model_id) as rec:
             response = self._client.generate_content(prompt)
-        text = response.text
-        in_tok = rec.get("input_tokens", 0)
-        out_tok = rec.get("output_tokens", 0)
+            # Update the record IN-PLACE before the context manager exits,
+            # so the cost log line written on exit reflects real usage.
+            usage = getattr(response, "usage_metadata", None)
+            if usage is not None:
+                in_tok = int(getattr(usage, "prompt_token_count", 0) or 0)
+                out_tok = int(getattr(usage, "candidates_token_count", 0) or 0)
+                rec["input_tokens"] = in_tok
+                rec["output_tokens"] = out_tok
         return GenerationResult(
-            answer=text,
+            answer=response.text,
             citations=[c for _, c in contexts],
             input_tokens=in_tok,
             output_tokens=out_tok,

@@ -86,18 +86,26 @@ def parse_filing(html: str) -> list[ParsedSection]:
     Returns sections in document order. Sections that we couldn't locate
     are simply absent from the result — call `parse_filing_with_stats` if
     you need to know the parse rate.
+
+    Two cleanup passes:
+    1. Drop sections < 500 chars (internal cross-references, not real Items)
+    2. If the same section_id appears multiple times (e.g. once in the TOC,
+       once in the real body), keep only the longest one. This is robust
+       because the real section is always much longer than the TOC mention.
     """
     text = _html_to_text(html)
     matches = _find_all_item_matches(text)
     if not matches:
         return []
-    sections: list[ParsedSection] = []
+    MIN_SECTION_CHARS = 500
+    raw_sections: list[ParsedSection] = []
     for i, (pos, sid, header) in enumerate(matches):
         end = matches[i + 1][0] if i + 1 < len(matches) else len(text)
         body = text[pos:end].strip()
-        # Strip the header from the body so the chunk doesn't repeat it
         body = body[len(header):].strip()
-        sections.append(
+        if len(body) < MIN_SECTION_CHARS:
+            continue
+        raw_sections.append(
             ParsedSection(
                 section_id=sid,
                 title=header,
@@ -105,7 +113,14 @@ def parse_filing(html: str) -> list[ParsedSection]:
                 char_count=len(body),
             )
         )
-    return sections
+    # Dedupe: keep the longest occurrence of each section_id (real > TOC)
+    best_by_id: dict[str, ParsedSection] = {}
+    for s in raw_sections:
+        if s.section_id not in best_by_id or s.char_count > best_by_id[s.section_id].char_count:
+            best_by_id[s.section_id] = s
+    # Return in canonical item order
+    out = [best_by_id[sid] for sid in _ITEM_PATTERNS.keys() if sid in best_by_id]
+    return out
 
 
 def parse_filing_with_stats(html: str) -> tuple[list[ParsedSection], dict]:

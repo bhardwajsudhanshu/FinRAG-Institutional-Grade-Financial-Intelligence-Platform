@@ -68,6 +68,9 @@ def record_call(
         with record_call("embed", "text-embedding-005", input_tokens=128) as r:
             embedding = embedder.embed(text)
         # r["cost_usd"], r["latency_ms"] populated after exit
+        # r["input_tokens"] / r["output_tokens"] can be mutated INSIDE the
+        # `with` block to reflect real usage (e.g. from response.usage_metadata).
+        # The log line written on exit reflects the *final* values.
     """
     settings = get_settings()
     record: dict[str, Any] = {
@@ -85,7 +88,13 @@ def record_call(
         yield record
     finally:
         record["latency_ms"] = int((time.perf_counter() - t0) * 1000)
-        record["cost_usd"] = compute_cost_usd(model, input_tokens, output_tokens)
+        # Recompute cost from the *current* values in the record — the body
+        # of the `with` block may have updated them with real usage.
+        record["cost_usd"] = compute_cost_usd(
+            model,
+            int(record.get("input_tokens", 0) or 0),
+            int(record.get("output_tokens", 0) or 0),
+        )
         try:
             _append_log(Path(settings.cost_log_path), record)
         except OSError as e:

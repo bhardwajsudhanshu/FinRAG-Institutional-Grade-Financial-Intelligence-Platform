@@ -3,7 +3,7 @@
 # All commands assume you're in the project root and have uv installed.
 # The venv lives in .venv/ on F: drive; uv cache at F:/.uv-cache.
 
-.PHONY: help install setup env dev test lint format ingest ingest-sample query eval ui docker-up docker-down docker-logs clean
+.PHONY: help install setup env dev test lint format ingest ingest-sample query eval ui docker-up docker-down docker-logs clean vertex-check
 
 help: ## Show this help
 	@uv run python -c "import re; print('\n'.join(sorted(re.findall(r'^([a-zA-Z_-]+):.*?## (.*)', open('Makefile').read(), re.MULTILINE))))"
@@ -14,6 +14,9 @@ env: ## Create venv on F: drive and install deps
 	uv sync --extra dev --extra eval --extra vectordbs
 
 install: env ## Alias for `make env`
+
+vertex-check: ## Verify Vertex AI auth is wired correctly
+	uv run python scripts/test_vertex_auth.py
 
 # --- Common workflows -------------------------------------------------------
 ingest: ## Ingest all 20 tickers × 3 years from SEC EDGAR
