@@ -41,7 +41,7 @@ from typing import Any
 import pandas as pd
 from loguru import logger
 
-from finrag.chunking import chunk_sections
+from finrag.chunking import chunk_sections_by_strategy
 from finrag.config import get_settings
 from finrag.data.parse_sections import parse_filing
 from finrag.generation import get_generator
@@ -144,7 +144,8 @@ def build_index_for_qa_pairs(
         if not sections:
             logger.warning(f"No sections parsed for {key}, skipping")
             continue
-        chunks = chunk_sections(
+        chunks = chunk_sections_by_strategy(
+            settings.chunker_strategy,
             sections=sections,
             ticker=ticker,
             filing_date=filing_date,
@@ -152,7 +153,10 @@ def build_index_for_qa_pairs(
             accession_number=accession,
         )
         all_chunks.extend(chunks)
-        logger.info(f"  [{key}] parsed {len(sections)} sections, {len(chunks)} chunks")
+        logger.info(
+            f"  [{key}] parsed {len(sections)} sections, {len(chunks)} chunks "
+            f"(chunker={settings.chunker_strategy})"
+        )
     logger.info(f"Total chunks to embed: {len(all_chunks)}")
 
     if not all_chunks:

@@ -42,8 +42,12 @@ eval-nightly: ## Full eval run + leaderboard refresh (for nightly cron)
 	uv run python -m finrag.cli.eval --exp exp_001_naive_baseline
 	uv run python tests/eval/update_leaderboard.py
 
-leaderboard: ## Rebuild results/leaderboard.json from results/experiments.csv
+leaderboard: ## Rebuild results/leaderboard.json + write an immutable snapshot
 	uv run python tests/eval/update_leaderboard.py
+	@echo ""
+	@echo "Immutability: rolling leaderboard.json is overwritten; an immutable"
+	@echo "timestamped copy is written to results/leaderboard_snapshots/."
+	@echo "Past experiment rows in results/experiments.csv are never modified."
 
 qa-gen: ## Generate the 200-Q eval set (slow, ~80 min on Vertex)
 	uv run python tests/eval/generate_qa_pairs.py

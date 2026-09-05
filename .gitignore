@@ -50,3 +50,9 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# Note: results/ and results/leaderboard_snapshots/ are INTENTIONALLY
+# tracked. The append-only ledger of every experiment ever run lives
+# in results/experiments.csv and a per-refresh immutable copy lives
+# in results/leaderboard_snapshots/ — these are the project's
+# decision record.

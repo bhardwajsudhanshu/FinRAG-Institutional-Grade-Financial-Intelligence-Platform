@@ -1,0 +1,33 @@
+exp_name: exp_002_recursive
+description: LangChain RecursiveCharacterTextSplitter (re-implemented in-line). Paragraph/sentence respect. Identical retrieval + generator to exp_001.
+
+chunker:
+  type: recursive_character
+  size: 2000        # characters, not tokens (~500 tokens, matches exp_001 budget)
+  overlap: 200
+  separators: ["\n\n", "\n", ". ", " ", ""]
+
+embedder:
+  backend: vertex
+  model: text-embedding-005
+  dim: 768
+
+retrieval:
+  backend: in_memory
+  metric: cosine
+  top_k: 5
+
+generator:
+  backend: vertex
+  model: gemini-2.5-flash
+  temperature: 0.0
+
+ragas_judge:
+  llm: gemini-2.5-flash
+  embeddings: text-embedding-005
+
+eval_set:
+  path: data/eval/qa_pairs.jsonl
+  version: v1
+  n_questions: 139
+  n_filings: 20

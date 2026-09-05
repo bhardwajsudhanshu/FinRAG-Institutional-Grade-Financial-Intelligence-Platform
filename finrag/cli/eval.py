@@ -90,12 +90,29 @@ def main(
     ),
     top_k: int = typer.Option(5, help="Number of chunks to retrieve per Q"),
     limit: int = typer.Option(0, help="Limit to N Q's (0 = no limit, smoke test otherwise)"),
+    smoke: bool = typer.Option(
+        False, "--smoke",
+        help="Smoke test: route output to results/smoke/ instead of the canonical CSV. "
+             "Smoke runs never appear on the leaderboard.",
+    ),
 ):
     settings = get_settings()
     if not qa_path.exists():
         console.print(f"[red]Q&A set not found at {qa_path}[/]")
         console.print("Generate one first: [cyan]uv run python tests/eval/generate_qa_pairs.py[/]")
         raise typer.Exit(code=1)
+
+    # Smoke test routing: keep smoke results OUT of the canonical CSV
+    # and the leaderboard. Smoke goes to results/smoke/<exp>_<ts>/ and a
+    # separate results/smoke/smoke_experiments.csv ledger.
+    if smoke:
+        import datetime as _dt
+        ts = _dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+        smoke_dir = Path("results/smoke") / f"{exp}_{ts}"
+        smoke_dir.mkdir(parents=True, exist_ok=True)
+        out_csv = smoke_dir / "smoke_experiments.csv"
+        per_q_out = smoke_dir / "per_question.jsonl"
+        console.print(f"[yellow]SMOKE mode:[/] routed to {smoke_dir} (canonical CSV untouched)")
 
     # Smoke test: write a limited copy so run_experiment loads only N Q's
     work_qa = qa_path
@@ -107,6 +124,7 @@ def main(
     console.print(f"[bold]Running experiment:[/] {exp}")
     console.print(f"  Q&A set:    {work_qa}")
     console.print(f"  Backend:    embedder={settings.embedder_backend} generator={settings.generator_backend}")
+    console.print(f"  Chunker:    {settings.chunker_strategy}")
     console.print(f"  top_k:      {top_k}")
 
     # Default per-Q output path: results/<exp>/per_question.jsonl
