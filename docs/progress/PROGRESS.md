@@ -24,17 +24,20 @@
 | STEP_008 | 2026-09-07 | `c685943` exp_003 full run | exp_003 full 139-Q run (6858 chunks, fa=0.8932 track-best) + CSV 14-col migration + leaderboard refresh | `docs/progress/STEP_008_exp003_full_run.md` | DONE |
 | STEP_009 | 2026-09-07 | `86c2329` OOS sentinel fix | OOS sentinel normalization fix (`normalize_source_span`), smoke-verified OOS flip, no ledger change | `docs/progress/STEP_009_oos_sentinel_fix.md` | DONE |
 | STEP_010 | 2026-09-07 | `45e699b` structural chunker + exp_004 scaffold | Structural chunker (section budgets) + exp_004 scaffold, smoke 0.833 content, 19s index build | `docs/progress/STEP_010_structural_chunker_scaffold.md` | DONE |
+| STEP_011 | 2026-09-07 | PENDING (commit next) | exp_004 full 139-Q run (4952 chunks, content 0.6906 = projection, OOS 1.000) + leaderboard refresh | `docs/progress/STEP_011_exp004_full_run.md` | PENDING — ready to commit |
+| STEP_012 | — | — | NEXT: Phase 3 retrieval (BM25 → hybrid RRF); ADR-004 first | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
 ## Current headline numbers (frozen)
 
-From `results/experiments.csv` (3 rows, 14-col schema since STEP_008):
+From `results/experiments.csv` (4 rows, 14-col schema since STEP_008):
 
 - `exp_001_naive_baseline`: 139 Q, 20 filings, 4447 chunks, context_recall=0.8058, faithfulness=0.8847, answer_relevancy=0.7428, hit@5=0.6043, cite_acc=0.5612, latency 8731ms, $0.038 (content cols empty — frozen before fix)
 - `exp_002_recursive`: 139 Q, 20 filings, 5412 chunks, context_recall=0.7913, faithfulness=0.8595, answer_relevancy=0.7080, hit@5=0.3237 (artifact), cite_acc=0.2158 (artifact), latency 9968ms, $0.0299 (content cols empty — frozen)
-- `exp_003_semantic`: 139 Q, 20 filings, 6858 chunks, context_recall=0.7562, faithfulness=**0.8932 (best)**, answer_relevancy=0.7103, hit@5=0.3237 (artifact), cite_acc=0.2302 (artifact), **hit@5_content=0.5612, cite_content=0.6691**, latency 8862ms, $0.0301
+- `exp_003_semantic`: 139 Q, 20 filings, 6858 chunks, context_recall=0.7562, faithfulness=**0.8932 (best)**, answer_relevancy=0.7103, hit@5=0.3237 (artifact), cite_acc=0.2302 (artifact), **hit@5_content=0.5612 (v1 OOS logic; fixed-logic projection 0.6906)**, cite_content=0.6691, latency 8862ms, $0.0301
+- `exp_004_structural`: 139 Q, 20 filings, 4952 chunks, context_recall=0.7727, faithfulness=0.8826, answer_relevancy=0.7340, hit@5=0.3957 (artifact), cite_acc=0.2806 (artifact), **hit@5_content=0.6906 (fixed logic; non-OOS 0.645 = exp_003)**, cite_content=0.6691, latency 8908ms, $0.0327
 
-Leaders (`results/leaderboard.json` @ 2026-09-07T00:40:03): chunking/retrieval = exp_001 (context_recall); **chunking_content = exp_003 (0.5612, first holder); end_to_end = exp_003 (faithfulness 0.8932).**
+Leaders (`results/leaderboard.json` @ 2026-09-07T04:54:08): chunking/retrieval = exp_001 (context_recall); **chunking_content = exp_004 (0.6906); end_to_end = exp_003 (faithfulness 0.8932).**
 Trustworthy cross-chunker signal: content-based same_ticker+section hit@5 = 0.734 (exp_001) vs 0.741 (exp_002) — see `docs/experiments/exp_002_recursive/analysis.md`.
 
 ## Data on disk (as of 2026-09-07)
@@ -42,13 +45,13 @@ Trustworthy cross-chunker signal: content-based same_ticker+section hit@5 = 0.73
 - `data/raw/`: ~50+ 10-K HTML files (AAPL/MSFT/GOOGL have 3-4y; BAC/GS/JPM only 1 filing each — ingest incomplete, see STEP_003).
 - `data/eval/qa_pairs.jsonl`: v1 frozen, 139 Q (67 lookup, 45 section, 9 synthesis, 18 OOS), 20 tickers.
 - `data/runtime_costs.jsonl`: per-call cost log (all Vertex calls, incl. both STEP_008 attempts).
-- `results/exp_001_naive_baseline/`, `exp_002_recursive/`, `exp_003_semantic/per_question.jsonl`: per-Q audit trail (139 rows each).
+- `results/exp_001_naive_baseline/`, `exp_002_recursive/`, `exp_003_semantic/`, `exp_004_structural/per_question.jsonl`: per-Q audit trail (139 rows each).
 - `results/smoke/*` + `data/eval/*.limit*.jsonl`: ephemeral proofs, snapshotted by the user in `9261360` (metric-fix smokes), `5bd0283` (STEP_007 smoke), `b03f4a7` (STEP_009 smoke + limit6 slice) — all three commits are smoke/limit only, no code. New smokes stay untracked until snapshotted.
 
 ## Roadmap position
 
 Week 1-2 Foundation: DONE (exp_001 + eval set).
-Week 3-4 Chunking: 2/5 full runs done (exp_002, exp_003). Structural/late/contextual TODO — exp_004 next (section-aware budgets, per exp_003 decision).
+Week 3-4 Chunking: 3/5 full runs done (exp_002, exp_003, exp_004). No chunker beats naive on context_recall; semantic leads faithfulness; structural leads content-hit + efficiency. exp_005 (late/contextual) DEFERRED per exp_004 decision — next is Phase 3 retrieval.
 Week 5-12: NOT STARTED (vectordb, retrieval, RAPTOR, rerank, CRAG, router, cache, API/UI).
 
 ## Tracking discipline (locked from STEP_007 onward)

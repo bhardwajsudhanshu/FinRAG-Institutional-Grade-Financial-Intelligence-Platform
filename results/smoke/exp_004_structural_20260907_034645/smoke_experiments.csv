@@ -1,0 +1,2 @@
+exp_name,timestamp,n_questions,n_filings,n_chunks,context_recall,faithfulness,answer_relevancy,hit_at_5,citation_accuracy,mean_latency_ms,total_cost_usd,hit_at_5_content,citation_accuracy_content
+exp_004_structural,2026-09-07T03:48:44,6,1,141,0.8,1.0,0.7797105017385852,0.5,0.3333333333333333,6362.166666666667,0.0015800999999999999,0.8333333333333334,0.8333333333333334
