@@ -1,0 +1,35 @@
+exp_name: exp_003_semantic
+description: Sentence-level embedding-distance splits (P95 breakpoint). Same retrieval + generator as exp_001/002. First experiment scored on content-anchored metrics.
+
+chunker:
+  type: semantic_embedding_distance
+  max_tokens: 512
+  overlap_tokens: 50        # approximated as 1-sentence overlap
+  threshold_percentile: 95.0
+  sentence_split: "(?<=[.!?])\\s+ | blank lines"
+
+embedder:
+  backend: vertex
+  model: text-embedding-005
+  dim: 768
+  note: chunking embeds sentences once + index embeds chunks once (~2x embed cost)
+
+retrieval:
+  backend: in_memory
+  metric: cosine
+  top_k: 5
+
+generator:
+  backend: vertex
+  model: gemini-2.5-flash
+  temperature: 0.0
+
+ragas_judge:
+  llm: gemini-2.5-flash
+  embeddings: text-embedding-005
+
+eval_set:
+  path: data/eval/qa_pairs.jsonl
+  version: v1
+  n_questions: 139
+  n_filings: 20

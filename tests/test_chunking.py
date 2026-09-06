@@ -27,8 +27,10 @@ from finrag.chunking import (
     chunk_sections,
     chunk_sections_by_strategy,
     chunk_sections_recursive,
+    chunk_sections_semantic,
     naive_chunk_text,
     recursive_chunk_text,
+    semantic_chunk_text,
 )
 
 
@@ -178,3 +180,71 @@ def test_chunk_sections_by_strategy_unknown_raises() -> None:
             "does_not_exist", [sec], ticker="AAPL", filing_date="2025-10-31",
             fiscal_year=2025, accession_number="0000320193-25-000001",
         )
+
+
+# --- semantic_chunk_text (exp_003) -------------------------------------------
+
+
+def _fake_embed_fn(texts: list[str]) -> list[list[float]]:
+    """Deterministic 2-D embedder: finance sentences cluster, sports differ."""
+    out = []
+    for t in texts:
+        low = t.lower()
+        if any(k in low for k in ("revenue", "sales", "margin", "income")):
+            out.append([1.0, 0.0])
+        else:
+            out.append([0.0, 1.0])
+    return out
+
+
+def test_semantic_chunk_text_empty_returns_empty_list() -> None:
+    assert semantic_chunk_text("", embed_fn=_fake_embed_fn) == []
+
+
+def test_semantic_chunk_text_single_sentence_returns_as_is() -> None:
+    out = semantic_chunk_text("Net sales were $383B.", embed_fn=_fake_embed_fn)
+    assert out == ["Net sales were $383B."]
+
+
+def test_semantic_chunk_text_splits_at_topic_shift() -> None:
+    text = (
+        "Net sales were $383B in fiscal 2023. Gross margin was 37.6 percent. "
+        "The striker scored twice in the second half. The crowd cheered loudly."
+    )
+    out = semantic_chunk_text(text, max_tokens=512, embed_fn=_fake_embed_fn)
+    assert len(out) >= 2
+    assert "Net sales" in out[0]
+    assert "striker" in out[-1] or "crowd" in out[-1]
+
+
+def test_semantic_chunk_text_respects_max_tokens() -> None:
+    import tiktoken
+
+    enc = tiktoken.get_encoding("cl100k_base")
+    text = " ".join(f"Revenue sentence number {i}." for i in range(200))
+    out = semantic_chunk_text(text, max_tokens=100, embed_fn=_fake_embed_fn)
+    assert out
+    for c in out:
+        assert len(enc.encode(c, disallowed_special=())) <= 100 + 60  # 1-sent overlap slack
+
+
+def test_semantic_chunk_text_invalid_args_raise() -> None:
+    with pytest.raises(ValueError):
+        semantic_chunk_text("hi", max_tokens=0, embed_fn=_fake_embed_fn)
+    with pytest.raises(ValueError):
+        semantic_chunk_text("hi", max_tokens=100, overlap_tokens=100, embed_fn=_fake_embed_fn)
+
+
+def test_chunk_sections_semantic_sets_chunker_metadata() -> None:
+    sec = _FakeSection("item_7", "MD&A", "Net sales were $383B. Gross margin rose. " * 30)
+    out = chunk_sections_semantic(
+        [sec], ticker="AAPL", filing_date="2025-10-31",
+        fiscal_year=2025, accession_number="0000320193-25-000001",
+        embed_fn=_fake_embed_fn,
+    )
+    assert out
+    assert all(c.metadata["chunker"] == "semantic" for c in out)
+
+
+def test_chunker_dispatch_has_semantic() -> None:
+    assert "semantic" in CHUNKER_DISPATCH

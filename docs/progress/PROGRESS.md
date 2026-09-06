@@ -19,8 +19,9 @@
 | STEP_003 | 2026-09-05 | `6104e9b` 139 Q eval + accuracy | Full ingest (20 tickers), 139-Q v1 eval set, RAGAS runner, exp_001 baseline run | `docs/progress/STEP_003_eval_set_exp001.md` | DONE |
 | STEP_004 | 2026-09-05 | `3b4f77a` Recursive chunking implemented | Recursive chunker + dispatch + chunking tests + exp_002 scaffold | `docs/progress/STEP_004_recursive_chunker_code.md` | DONE |
 | STEP_005 | 2026-09-05 | `84a88f5` recursive results | exp_002 full run (5412 chunks) + analysis: chunk_id artifact found | `docs/progress/STEP_005_exp002_results.md` | DONE |
-| STEP_006 | 2026-09-06 | UNCOMMITTED (pending) | Content-anchored metrics fix: `span_appears_in_chunk`, `hit_at_5_content`, smoke-tested for exp_003 | `docs/progress/STEP_006_content_metrics_fix.md` | PENDING — commit next |
-| STEP_007 | — | — | NEXT: commit STEP_006, close exp_002, run exp_003 semantic | TBD | TODO |
+| STEP_006 | 2026-09-06 | `9261360` updated logs | Content-anchored metrics fix: `span_appears_in_chunk`, `hit_at_5_content`, smoke-tested for exp_003 | `docs/progress/STEP_006_content_metrics_fix.md` | DONE |
+| STEP_007 | 2026-09-06 | PENDING (commit next — see command below) | Semantic chunker + exp_003 scaffold, smoke-verified (5 Q: hit@5_content 0.80 vs 0.40) | `docs/progress/STEP_007_semantic_chunker_scaffold.md` | PENDING — ready to commit |
+| STEP_008 | — | — | NEXT: full 139-Q exp_003 run + analysis + leaderboard | TBD | TODO |
 
 ## Current headline numbers (frozen)
 
@@ -43,8 +44,25 @@ Trustworthy cross-chunker signal: content-based same_ticker+section hit@5 = 0.73
 ## Roadmap position
 
 Week 1-2 Foundation: DONE (exp_001 + eval set).
-Week 3-4 Chunking: 1/5 done (recursive done, semantic/structural/late/contextual TODO — exp_003 next).
+Week 3-4 Chunking: 1/5 full runs done (exp_002) + exp_003 scaffolded + smoke-verified (STEP_007). Full 139-Q exp_003 = STEP_008. Structural/late/contextual TODO.
 Week 5-12: NOT STARTED (vectordb, retrieval, RAPTOR, rerank, CRAG, router, cache, API/UI).
+
+## Tracking discipline (locked from STEP_007 onward)
+
+- Every implementation = 1 STEP file + 1 PROGRESS.md row + 1 commit (explicit pathspec, never `git add -A`).
+- Never commit: `results/smoke/*` (ephemeral), `data/eval/*.limit*.jsonl` (regenerable), `.claude/scheduled_tasks.lock` (stale), `.env`/`secrets/` (gitignored anyway).
+- Canonical ledgers (`results/experiments.csv`, `results/leaderboard.json`, `leaderboard_snapshots/`) change ONLY on full runs + `make leaderboard` — never on smoke.
+- Commit command for STEP_007 (run from project root, PowerShell).
+  Covers this step ONLY — STEP_006 was closed by `9261360`:
+
+```powershell
+git add finrag/chunking.py tests/test_chunking.py `
+  docs/progress/PROGRESS.md `
+  docs/progress/STEP_007_semantic_chunker_scaffold.md `
+  docs/experiments/exp_003_semantic/README.md docs/experiments/exp_003_semantic/config.yaml `
+  docs/experiments/exp_003_semantic/analysis.md
+git commit -m "STEP_007: semantic chunker + exp_003 scaffold (smoke-verified, hit_at_5_content 0.80)"
+```
 
 ## How to use this log
 

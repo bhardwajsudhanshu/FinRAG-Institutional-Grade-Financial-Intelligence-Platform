@@ -9,6 +9,8 @@ the same eval set. No fancy paragraph or sentence respect; just raw tokens.
 
 from __future__ import annotations
 
+import math
+import re
 from dataclasses import dataclass
 from typing import Callable
 
@@ -256,6 +258,179 @@ def chunk_sections_recursive(
     return chunks
 
 
+# --- exp_003: Semantic chunker ------------------------------------------------
+#
+# Sentence-level embedding-distance splits. Sentences with similar meaning
+# stay in one chunk; a large cosine distance between consecutive sentences
+# forces a breakpoint. Within each semantic region we still respect the
+# max-tokens budget (same 512/50 as exp_001) so embedding cost is comparable.
+#
+# Cost note: chunking itself embeds every sentence once (via get_embedder),
+# in addition to the later per-chunk embed in build_index. On Vertex this
+# roughly doubles the embed bill for the run (~$0.025/M tokens x2).
+# On mock backend it is free and deterministic.
+
+_SENT_SPLIT_RE = re.compile(r"(?<=[.!?])\s+|\n{2,}")
+
+
+def _split_sentences(text: str) -> list[str]:
+    """Split text into sentences on [.?!]+whitespace or blank lines."""
+    parts = _SENT_SPLIT_RE.split(text.strip())
+    return [p.strip() for p in parts if p.strip()]
+
+
+def _cosine_distance(a: list[float], b: list[float]) -> float:
+    na = math.sqrt(sum(x * x for x in a)) or 1.0
+    nb = math.sqrt(sum(x * x for x in b)) or 1.0
+    dot = sum(x * y for x, y in zip(a, b, strict=False)) / (na * nb)
+    return max(0.0, min(2.0, 1.0 - dot))
+
+
+def _percentile(data: list[float], p: float) -> float:
+    """Linear-interpolated percentile (no numpy dependency)."""
+    if not data:
+        return 0.0
+    s = sorted(data)
+    if len(s) == 1:
+        return s[0]
+    k = (len(s) - 1) * (p / 100.0)
+    f = math.floor(k)
+    c = math.ceil(k)
+    if f == c:
+        return s[int(k)]
+    return s[f] * (c - k) + s[c] * (k - f)
+
+
+def semantic_chunk_text(
+    text: str,
+    max_tokens: int = 512,
+    overlap_tokens: int = 50,
+    threshold_percentile: float = 95.0,
+    embed_fn=None,  # Callable[[list[str]], list[list[float]]] — injectable for tests
+    encoding_name: str = "cl100k_base",
+) -> list[str]:
+    """Split `text` at semantic breakpoints (embedding distance spikes).
+
+    Steps: sentences → embed → consecutive distances → breakpoint where
+    distance >= P95 → greedily pack sentences up to `max_tokens`, cutting
+    early at breakpoints. Single oversized sentences fall back to
+    `naive_chunk_text`. Overlap is 1 trailing sentence carried forward
+    (approximates the 50-token overlap budget without re-tokenizing).
+    """
+    if max_tokens <= 0:
+        raise ValueError("max_tokens must be > 0")
+    if overlap_tokens < 0 or overlap_tokens >= max_tokens:
+        raise ValueError("overlap_tokens must be in [0, max_tokens)")
+    if not text.strip():
+        return []
+    sentences = _split_sentences(text)
+    if not sentences:
+        return []
+    if len(sentences) == 1:
+        enc = tiktoken.get_encoding(encoding_name)
+        if len(_tokenize(sentences[0], enc)) <= max_tokens:
+            return sentences
+        return naive_chunk_text(
+            sentences[0], chunk_size=max_tokens, overlap=overlap_tokens,
+            encoding_name=encoding_name,
+        )
+
+    if embed_fn is None:
+        from finrag.embeddings import get_embedder  # lazy: keeps chunking import-light
+
+        embedder = get_embedder()
+        vectors = embedder.embed_batch(sentences)
+    else:
+        vectors = embed_fn(sentences)
+
+    distances = [_cosine_distance(vectors[i], vectors[i + 1]) for i in range(len(vectors) - 1)]
+    threshold = _percentile(distances, threshold_percentile)
+    breakpoints = {i + 1 for i, d in enumerate(distances) if d >= threshold}
+
+    enc = tiktoken.get_encoding(encoding_name)
+    chunks: list[str] = []
+    current: list[str] = []
+    current_tokens = 0
+    for idx, sent in enumerate(sentences):
+        sent_tokens = len(_tokenize(sent, enc))
+        if sent_tokens > max_tokens:
+            # Flush current, then hard-split the monster sentence.
+            if current:
+                chunks.append(" ".join(current))
+                current, current_tokens = [], 0
+            chunks.extend(
+                naive_chunk_text(
+                    sent, chunk_size=max_tokens, overlap=overlap_tokens,
+                    encoding_name=encoding_name,
+                )
+            )
+            continue
+        # Cut before this sentence if it starts a semantic region (and we
+        # already hold something) or if adding it would bust the budget.
+        if idx in breakpoints and current:
+            chunks.append(" ".join(current))
+            # Sentence overlap: carry last sentence forward (≈50-token budget).
+            current = [current[-1]] if current else []
+            current_tokens = len(_tokenize(" ".join(current), enc)) if current else 0
+        if current_tokens + sent_tokens > max_tokens and current:
+            chunks.append(" ".join(current))
+            current = [current[-1]] if current else []
+            current_tokens = len(_tokenize(" ".join(current), enc)) if current else 0
+        current.append(sent)
+        current_tokens += sent_tokens
+    if current:
+        chunks.append(" ".join(current))
+    return [c for c in chunks if c.strip()]
+
+
+def chunk_sections_semantic(
+    sections: list,
+    ticker: str,
+    filing_date: str,
+    fiscal_year: int,
+    accession_number: str,
+    max_tokens: int = 512,
+    overlap_tokens: int = 50,
+    threshold_percentile: float = 95.0,
+    embed_fn=None,
+) -> list[Chunk]:
+    """Chunk a parsed 10-K's sections with the semantic splitter (exp_003).
+
+    Same per-chunk metadata as naive/recursive plus `chunker="semantic"`.
+    """
+    chunks: list[Chunk] = []
+    for sec in sections:
+        if not sec.text.strip():
+            continue
+        sub = semantic_chunk_text(
+            sec.text,
+            max_tokens=max_tokens,
+            overlap_tokens=overlap_tokens,
+            threshold_percentile=threshold_percentile,
+            embed_fn=embed_fn,
+        )
+        for i, text in enumerate(sub):
+            cid = f"{ticker}_{filing_date}_{sec.section_id}::{i:04d}"
+            chunks.append(
+                Chunk(
+                    chunk_id=cid,
+                    text=text,
+                    metadata={
+                        "ticker": ticker,
+                        "filing_date": filing_date,
+                        "fiscal_year": fiscal_year,
+                        "accession_number": accession_number,
+                        "section_id": sec.section_id,
+                        "section_title": sec.title,
+                        "chunk_index": i,
+                        "chunker": "semantic",
+                        "semantic_threshold_p": threshold_percentile,
+                    },
+                )
+            )
+    return chunks
+
+
 # --- Chunker dispatch --------------------------------------------------------
 
 # Map a `chunker_strategy` setting to a chunker function. The default
@@ -263,6 +438,7 @@ def chunk_sections_recursive(
 CHUNKER_DISPATCH: dict[str, Callable[..., list[Chunk]]] = {
     "naive": chunk_sections,
     "recursive": chunk_sections_recursive,
+    "semantic": chunk_sections_semantic,
 }
 
 
