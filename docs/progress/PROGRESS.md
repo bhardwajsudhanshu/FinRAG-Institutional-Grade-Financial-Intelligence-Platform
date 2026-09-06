@@ -41,7 +41,7 @@ Trustworthy cross-chunker signal: content-based same_ticker+section hit@5 = 0.73
 - `data/eval/qa_pairs.jsonl`: v1 frozen, 139 Q (67 lookup, 45 section, 9 synthesis, 18 OOS), 20 tickers.
 - `data/runtime_costs.jsonl`: per-call cost log (all Vertex calls, incl. both STEP_008 attempts).
 - `results/exp_001_naive_baseline/`, `exp_002_recursive/`, `exp_003_semantic/per_question.jsonl`: per-Q audit trail (139 rows each).
-- `results/smoke/exp_003_*`: untracked ephemeral smokes (never committed going forward; two old ones predate the rule inside `9261360`).
+- `results/smoke/*`: ephemeral by default (never in STEP commits). Exception, recorded honestly: the user snapshotted smoke outputs inside `9261360` (exp_003_smoke_metric_test_* metric-fix proofs) and `5bd0283` (STEP_007 semantic smoke) — commit message says "changed code in chunking" but stat shows smoke files only, no code. So those smokes are tracked; future smokes stay untracked unless explicitly snapshotted.
 
 ## Roadmap position
 
