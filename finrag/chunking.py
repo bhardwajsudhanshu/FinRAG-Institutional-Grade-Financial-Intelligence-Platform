@@ -431,6 +431,81 @@ def chunk_sections_semantic(
     return chunks
 
 
+# --- exp_004: Structural chunker ------------------------------------------------
+#
+# Document-aware budgets: 10-K sections have known discourse shapes
+# (ADR-001), so one uniform budget (recursive's 2000/200) is wrong
+# everywhere. Risk Factors (item_1a) are enumerated lists — small chunks
+# align with list items. MD&A (item_7) is flowing narrative — wide windows
+# preserve cross-sentence context. Financials (item_8) are tables —
+# splitting mid-table destroys numbers. Splitting reuses
+# recursive_chunk_text (paragraph-aware); only the budget varies.
+# Zero embedding cost at chunk time (unlike semantic).
+
+# section_id -> (chunk_size, chunk_overlap) in characters (LangChain-style,
+# matching recursive's 2000/200 default so exp_002 is the fair baseline).
+SECTION_CHUNK_BUDGETS: dict[str, tuple[int, int]] = {
+    "item_1": (2000, 200),  # Business narrative — default
+    "item_1a": (1200, 200),  # Risk Factors — enumerated list items
+    "item_1b": (1200, 200),  # Unresolved Staff Comments — short lists
+    "item_1c": (1200, 200),  # Cybersecurity — short lists
+    "item_2": (2000, 200),  # Properties
+    "item_3": (2000, 200),  # Legal Proceedings
+    "item_7": (3000, 200),  # MD&A — flowing narrative, keep context wide
+    "item_7a": (2000, 200),  # Market Risk disclosures
+    "item_8": (3000, 200),  # Financials — tables must not split mid-row
+}
+
+_DEFAULT_STRUCTURAL_BUDGET = (2000, 200)
+
+
+def chunk_sections_structural(
+    sections: list,
+    ticker: str,
+    filing_date: str,
+    fiscal_year: int,
+    accession_number: str,
+    budgets: dict[str, tuple[int, int]] | None = None,
+) -> list[Chunk]:
+    """Chunk a parsed 10-K's sections with per-section budgets (exp_004).
+
+    Unknown section_ids fall back to `_DEFAULT_STRUCTURAL_BUDGET` so a
+    future parser addition can't crash the pipeline. Metadata carries
+    `chunker="structural"` plus the applied `section_budget` for audit.
+    """
+    table = budgets or SECTION_CHUNK_BUDGETS
+    chunks: list[Chunk] = []
+    for sec in sections:
+        if not sec.text.strip():
+            continue
+        size, overlap = table.get(sec.section_id, _DEFAULT_STRUCTURAL_BUDGET)
+        sub = recursive_chunk_text(
+            sec.text,
+            chunk_size=size,
+            chunk_overlap=overlap,
+        )
+        for i, text in enumerate(sub):
+            cid = f"{ticker}_{filing_date}_{sec.section_id}::{i:04d}"
+            chunks.append(
+                Chunk(
+                    chunk_id=cid,
+                    text=text,
+                    metadata={
+                        "ticker": ticker,
+                        "filing_date": filing_date,
+                        "fiscal_year": fiscal_year,
+                        "accession_number": accession_number,
+                        "section_id": sec.section_id,
+                        "section_title": sec.title,
+                        "chunk_index": i,
+                        "chunker": "structural",
+                        "section_budget": size,
+                    },
+                )
+            )
+    return chunks
+
+
 # --- Chunker dispatch --------------------------------------------------------
 
 # Map a `chunker_strategy` setting to a chunker function. The default
@@ -439,6 +514,7 @@ CHUNKER_DISPATCH: dict[str, Callable[..., list[Chunk]]] = {
     "naive": chunk_sections,
     "recursive": chunk_sections_recursive,
     "semantic": chunk_sections_semantic,
+    "structural": chunk_sections_structural,
 }
 
 

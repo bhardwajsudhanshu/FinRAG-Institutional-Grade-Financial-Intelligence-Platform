@@ -1,0 +1,44 @@
+exp_name: exp_004_structural
+description: Per-section recursive budgets (risk lists small, narrative/financials wide). Same retrieval + generator as exp_001-003. First full run under fixed OOS logic (STEP_009).
+
+chunker:
+  type: structural_section_budgets
+  budgets_chars:
+    item_1a: [1200, 200]
+    item_1b: [1200, 200]
+    item_1c: [1200, 200]
+    item_1: [2000, 200]
+    item_2: [2000, 200]
+    item_3: [2000, 200]
+    item_7a: [2000, 200]
+    item_7: [3000, 200]
+    item_8: [3000, 200]
+  fallback: [2000, 200]
+  splitter: recursive_character
+  separators: ["\n\n", "\n", ". ", " ", ""]
+
+embedder:
+  backend: vertex
+  model: text-embedding-005
+  dim: 768
+  note: no chunk-time embedding (unlike semantic); index build at recursive speed
+
+retrieval:
+  backend: in_memory
+  metric: cosine
+  top_k: 5
+
+generator:
+  backend: vertex
+  model: gemini-2.5-flash
+  temperature: 0.0
+
+ragas_judge:
+  llm: gemini-2.5-flash
+  embeddings: text-embedding-005
+
+eval_set:
+  path: data/eval/qa_pairs.jsonl
+  version: v1
+  n_questions: 139
+  n_filings: 20

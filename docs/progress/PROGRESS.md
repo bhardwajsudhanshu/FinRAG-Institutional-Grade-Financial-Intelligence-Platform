@@ -23,7 +23,8 @@
 | STEP_007 | 2026-09-06 | `b0d510e` semantic chunker + exp_003 scaffold | Semantic chunker + exp_003 scaffold, smoke-verified (5 Q: hit@5_content 0.80 vs 0.40) | `docs/progress/STEP_007_semantic_chunker_scaffold.md` | DONE |
 | STEP_008 | 2026-09-07 | `c685943` exp_003 full run | exp_003 full 139-Q run (6858 chunks, fa=0.8932 track-best) + CSV 14-col migration + leaderboard refresh | `docs/progress/STEP_008_exp003_full_run.md` | DONE |
 | STEP_009 | 2026-09-07 | `86c2329` OOS sentinel fix | OOS sentinel normalization fix (`normalize_source_span`), smoke-verified OOS flip, no ledger change | `docs/progress/STEP_009_oos_sentinel_fix.md` | DONE |
-| STEP_010 | — | — | NEXT: exp_004 structural chunker (first full run under fixed OOS logic) | TBD | TODO |
+| STEP_010 | 2026-09-07 | PENDING (commit next) | Structural chunker (section budgets) + exp_004 scaffold, smoke 0.833 content, 19s index build | `docs/progress/STEP_010_structural_chunker_scaffold.md` | PENDING — ready to commit |
+| STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
 ## Current headline numbers (frozen)
 
@@ -42,7 +43,7 @@ Trustworthy cross-chunker signal: content-based same_ticker+section hit@5 = 0.73
 - `data/eval/qa_pairs.jsonl`: v1 frozen, 139 Q (67 lookup, 45 section, 9 synthesis, 18 OOS), 20 tickers.
 - `data/runtime_costs.jsonl`: per-call cost log (all Vertex calls, incl. both STEP_008 attempts).
 - `results/exp_001_naive_baseline/`, `exp_002_recursive/`, `exp_003_semantic/per_question.jsonl`: per-Q audit trail (139 rows each).
-- `results/smoke/*`: ephemeral by default (never in STEP commits). Exception, recorded honestly: the user snapshotted smoke outputs inside `9261360` (exp_003_smoke_metric_test_* metric-fix proofs) and `5bd0283` (STEP_007 semantic smoke) — commit message says "changed code in chunking" but stat shows smoke files only, no code. So those smokes are tracked; future smokes stay untracked unless explicitly snapshotted.
+- `results/smoke/*` + `data/eval/*.limit*.jsonl`: ephemeral proofs, snapshotted by the user in `9261360` (metric-fix smokes), `5bd0283` (STEP_007 smoke), `b03f4a7` (STEP_009 smoke + limit6 slice) — all three commits are smoke/limit only, no code. New smokes stay untracked until snapshotted.
 
 ## Roadmap position
 
@@ -53,7 +54,7 @@ Week 5-12: NOT STARTED (vectordb, retrieval, RAPTOR, rerank, CRAG, router, cache
 ## Tracking discipline (locked from STEP_007 onward)
 
 - Every implementation = 1 STEP file + 1 PROGRESS.md row + 1 commit (explicit pathspec, never `git add -A`).
-- Never commit: `results/smoke/*` (ephemeral), `data/eval/*.limit*.jsonl` (regenerable), `.claude/scheduled_tasks.lock` (stale), `.env`/`secrets/` (gitignored anyway).
+- STEP commits exclude regenerable/ephemeral artifacts (`results/smoke/*`, `data/eval/*.limit*.jsonl`, `.env`/`secrets/`). Settled pattern: the user snapshots notable smoke/limit files in separate commits (`9261360`, `5bd0283`, `b03f4a7` — all smoke/limit only, no code). STEP_00X commits never include them.
 - Canonical ledgers (`results/experiments.csv`, `results/leaderboard.json`, `leaderboard_snapshots/`) change ONLY on full runs + `make leaderboard` — never on smoke.
 - Commit command for STEP_008 (run from project root, PowerShell):
 

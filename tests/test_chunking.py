@@ -23,11 +23,13 @@ import pytest
 
 from finrag.chunking import (
     CHUNKER_DISPATCH,
+    SECTION_CHUNK_BUDGETS,
     Chunk,
     chunk_sections,
     chunk_sections_by_strategy,
     chunk_sections_recursive,
     chunk_sections_semantic,
+    chunk_sections_structural,
     naive_chunk_text,
     recursive_chunk_text,
     semantic_chunk_text,
@@ -248,3 +250,65 @@ def test_chunk_sections_semantic_sets_chunker_metadata() -> None:
 
 def test_chunker_dispatch_has_semantic() -> None:
     assert "semantic" in CHUNKER_DISPATCH
+
+
+# --- chunk_sections_structural (exp_004) --------------------------------------
+
+
+def test_structural_budgets_cover_all_known_sections() -> None:
+    for sid in ("item_1", "item_1a", "item_1b", "item_1c", "item_2",
+                "item_3", "item_7", "item_7a", "item_8"):
+        assert sid in SECTION_CHUNK_BUDGETS
+        size, overlap = SECTION_CHUNK_BUDGETS[sid]
+        assert size > 0 and 0 <= overlap < size
+
+
+def test_structural_risk_budget_smaller_than_mda() -> None:
+    # The core hypothesis: enumerated risk lists get small chunks,
+    # flowing MD&A narrative gets wide ones.
+    assert SECTION_CHUNK_BUDGETS["item_1a"][0] < SECTION_CHUNK_BUDGETS["item_7"][0]
+    assert SECTION_CHUNK_BUDGETS["item_8"][0] == SECTION_CHUNK_BUDGETS["item_7"][0]
+
+
+def test_chunk_sections_structural_sets_chunker_metadata() -> None:
+    sec = _FakeSection("item_1a", "Risk Factors", "Risk sentence one. " * 100)
+    out = chunk_sections_structural([sec], ticker="AAPL", filing_date="2025-10-31",
+                                    fiscal_year=2025,
+                                    accession_number="0000320193-25-000001")
+    assert out
+    assert all(c.metadata["chunker"] == "structural" for c in out)
+    assert all(c.metadata["section_budget"] == 1200 for c in out)
+
+
+def test_structural_applies_per_section_budgets() -> None:
+    # Same long text as risk (1200 budget) vs MD&A (3000 budget):
+    # the risk section must yield at least as many chunks.
+    text = "Some disclosure sentence with substance. " * 120
+    risk = chunk_sections_structural(
+        [_FakeSection("item_1a", "Risk", text)], ticker="AAPL",
+        filing_date="2025-10-31", fiscal_year=2025,
+        accession_number="0000320193-25-000001")
+    mda = chunk_sections_structural(
+        [_FakeSection("item_7", "MD&A", text)], ticker="AAPL",
+        filing_date="2025-10-31", fiscal_year=2025,
+        accession_number="0000320193-25-000001")
+    assert len(risk) >= len(mda)
+
+
+def test_structural_unknown_section_falls_back_to_default() -> None:
+    sec = _FakeSection("item_99", "Future Item", "Content here. " * 100)
+    out = chunk_sections_structural([sec], ticker="AAPL", filing_date="2025-10-31",
+                                    fiscal_year=2025,
+                                    accession_number="0000320193-25-000001")
+    assert out
+    assert all(c.metadata["section_budget"] == 2000 for c in out)
+
+
+def test_chunker_dispatch_has_structural() -> None:
+    assert "structural" in CHUNKER_DISPATCH
+    sec = _FakeSection("item_7", "MD&A", "Real content " * 200)
+    out = chunk_sections_by_strategy(
+        "structural", [sec], ticker="AAPL", filing_date="2025-10-31",
+        fiscal_year=2025, accession_number="0000320193-25-000001",
+    )
+    assert all(c.metadata["chunker"] == "structural" for c in out)
