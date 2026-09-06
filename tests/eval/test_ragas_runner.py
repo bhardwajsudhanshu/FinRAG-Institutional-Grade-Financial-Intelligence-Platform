@@ -52,6 +52,58 @@ def test_experiment_result_csv_row_drops_per_question():
     assert row["context_recall"] == 0.7
 
 
+def test_experiment_result_content_anchored_fields_default_to_none():
+    """Frozen exp_001 / exp_002 rows were never serialized with the new
+    fields. Constructing an ExperimentResult without the content-anchored
+    fields (mimicking the legacy frozen shape) must default them to None
+    so the schema is backwards-compatible.
+    """
+    r = ExperimentResult(
+        exp_name="exp_001",
+        timestamp="2026-09-05T00:00:00",
+        n_questions=139,
+        n_filings=20,
+        n_chunks=4447,
+        context_recall=0.81,
+        faithfulness=0.88,
+        answer_relevancy=0.74,
+        hit_at_5=0.60,
+        citation_accuracy=0.56,
+        mean_latency_ms=8731.0,
+        total_cost_usd=0.038,
+    )
+    row = r.to_csv_row()
+    assert "hit_at_5_content" in row
+    assert "citation_accuracy_content" in row
+    assert row["hit_at_5_content"] is None
+    assert row["citation_accuracy_content"] is None
+
+
+def test_experiment_result_content_anchored_fields_populated():
+    """exp_003 onward populates both content-anchored columns. Verify
+    they round-trip through to_csv_row.
+    """
+    r = ExperimentResult(
+        exp_name="exp_003_semantic",
+        timestamp="2026-09-06T00:00:00",
+        n_questions=139,
+        n_filings=20,
+        n_chunks=5000,
+        context_recall=0.83,
+        faithfulness=0.87,
+        answer_relevancy=0.75,
+        hit_at_5=0.55,  # chunk_id-based, may regress vs naive
+        citation_accuracy=0.50,
+        hit_at_5_content=0.78,  # content-anchored, trustworthy
+        citation_accuracy_content=0.72,
+        mean_latency_ms=9500.0,
+        total_cost_usd=0.04,
+    )
+    row = r.to_csv_row()
+    assert row["hit_at_5_content"] == 0.78
+    assert row["citation_accuracy_content"] == 0.72
+
+
 def test_chunk_id_format(tmp_path: Path):
     # Sanity: chunk_ids have the right shape so retrieval matches the eval set
     c = Chunk(

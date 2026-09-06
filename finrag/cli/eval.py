@@ -37,6 +37,10 @@ console = Console()
 
 # Locked CSV schema. New metrics go at the end so we don't break
 # downstream pandas readers.
+# `hit_at_5_content` and `citation_accuracy_content` are the
+# content-anchored versions of the chunk_id-based metrics, added
+# 2026-09-06. They are None for exp_001 / exp_002 (frozen rows) and
+# populated from exp_003 onward. See memory/finrag-eval-fingerprinting.md.
 EXPERIMENTS_CSV_FIELDS = [
     "exp_name",
     "timestamp",
@@ -50,6 +54,8 @@ EXPERIMENTS_CSV_FIELDS = [
     "citation_accuracy",
     "mean_latency_ms",
     "total_cost_usd",
+    "hit_at_5_content",
+    "citation_accuracy_content",
 ]
 
 

@@ -37,8 +37,15 @@ LEADERBOARD_SCHEMA_VERSION = "1.0"
 # CATEGORY_CONFIG: how to score each category.
 # `metric` is the column in experiments.csv. `ascending` says whether lower
 # is better (latency, cost) or higher is better (recall, faithfulness).
+# `chunking_content` is the content-anchored cross-chunker signal
+# (added 2026-09-06; populated from exp_003 onward — exp_001 / exp_002
+# have None for this metric because those rows are frozen). Until the
+# first chunker that populates the content-anchored columns lands, the
+# `chunking_content` category will report `winner: null`, which is
+# intentional (it's a "not yet measured" sentinel, not an error).
 CATEGORY_CONFIG: dict[str, dict[str, Any]] = {
     "chunking": {"metric": "context_recall", "ascending": False, "primary": True},
+    "chunking_content": {"metric": "hit_at_5_content", "ascending": False, "primary": False},
     "vectordb": {"metric": "p95_latency_ms", "ascending": True, "primary": False},
     "retrieval": {"metric": "context_recall", "ascending": False, "primary": False},
     "reranker": {"metric": "hit_at_10", "ascending": False, "primary": False},
@@ -128,6 +135,8 @@ def main() -> int:
             "answer_relevancy": r.get("answer_relevancy"),
             "hit_at_5": r.get("hit_at_5"),
             "citation_accuracy": r.get("citation_accuracy"),
+            "hit_at_5_content": r.get("hit_at_5_content"),
+            "citation_accuracy_content": r.get("citation_accuracy_content"),
             "mean_latency_ms": r.get("mean_latency_ms"),
             "total_cost_usd": r.get("total_cost_usd"),
         }

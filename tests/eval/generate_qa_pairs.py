@@ -61,7 +61,6 @@ from __future__ import annotations
 import argparse
 import json
 import random
-import re
 import sys
 import time
 from dataclasses import asdict, dataclass
@@ -74,6 +73,7 @@ from loguru import logger
 from finrag.chunking import chunk_sections
 from finrag.config import get_settings
 from finrag.data.parse_sections import parse_filing
+from finrag.eval.metrics import span_appears_in_chunk
 from finrag.generation import get_eval_llm
 
 # --- Distribution knobs (locked-in plan) ------------------------------------
@@ -264,31 +264,20 @@ Output JSON:
 
 # --- Helpers ----------------------------------------------------------------
 
-def _normalize_span(span: str) -> str:
-    """Strip a span down to 'words only' for fuzzy containment check."""
-    return re.sub(r"\s+", " ", span).strip().lower()
-
-
 def _span_appears_in_chunk(span: str, chunk_text: str) -> bool:
-    """Check if `span` appears in `chunk_text` (whitespace-tolerant)."""
+    """Check if `span` appears in `chunk_text` (whitespace-tolerant).
+
+    Thin wrapper over `finrag.eval.metrics.span_appears_in_chunk` that
+    preserves the Q&A generator's `<no relevant span>` sentinel
+    convention (the verification step accepts those as a valid empty
+    anchor; the eval-time metrics do not see the sentinel because
+    out-of-scope Q's have `source_span == ""` by design).
+    """
     if not span or not chunk_text:
         return False
     if span.strip() == "<no relevant span>":
         return True
-    n_span = _normalize_span(span)
-    n_chunk = _normalize_span(chunk_text)
-    # Try a direct contains first
-    if n_span in n_chunk:
-        return True
-    # Looser: try the first 100 chars of the normalized span
-    if len(n_span) > 100:
-        if n_span[:100] in n_chunk:
-            return True
-    # Last 100 chars
-    if len(n_span) > 100:
-        if n_span[-100:] in n_chunk:
-            return True
-    return False
+    return span_appears_in_chunk(span, chunk_text)
 
 
 def _build_qa(

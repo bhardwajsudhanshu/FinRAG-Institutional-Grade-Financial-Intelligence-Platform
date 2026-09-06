@@ -20,9 +20,11 @@ from finrag.eval.ragas_runner import (
     build_index_for_qa_pairs,
     run_experiment,
 )
+from finrag.eval.metrics import span_appears_in_chunk
 
 __all__ = [
     "ExperimentResult",
     "build_index_for_qa_pairs",
     "run_experiment",
+    "span_appears_in_chunk",
 ]

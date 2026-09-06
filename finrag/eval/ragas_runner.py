@@ -16,6 +16,14 @@ Plus three cheap custom metrics we compute ourselves (no LLM judge):
                  include the source chunk
 - mean_latency:  average end-to-end latency in ms
 
+And two content-anchored versions of the above (populated from exp_003
+onward, see memory/finrag-eval-fingerprinting.md for why these exist):
+
+- hit_at_5_content:  fraction of Q's where any top-5 chunk's *text* contains
+                     the eval set's `source_span` substring. Trustworthy
+                     across chunker changes; the chunk_id-based hit@5 is not.
+- citation_accuracy_content:  same idea for the model's cited chunks.
+
 Usage
 -----
     from finrag.eval import run_experiment
@@ -44,6 +52,7 @@ from loguru import logger
 from finrag.chunking import chunk_sections_by_strategy
 from finrag.config import get_settings
 from finrag.data.parse_sections import parse_filing
+from finrag.eval.metrics import span_appears_in_chunk
 from finrag.generation import get_generator
 from finrag.retrieval import build_index, retrieve, results_to_citations
 
@@ -63,12 +72,19 @@ class ExperimentResult:
     context_recall: float | None
     faithfulness: float | None
     answer_relevancy: float | None
-    # Custom metrics
+    # Custom metrics — chunk_id-based (locked; brittle across chunkers)
     hit_at_5: float
     citation_accuracy: float
     mean_latency_ms: float
     # Cost
     total_cost_usd: float
+    # Custom metrics — content-anchored (trustworthy across chunkers).
+    # Populated from exp_003 onward. None for exp_001 / exp_002 since those
+    # rows are frozen — see memory/finrag-eval-fingerprinting.md.
+    # Declared after the required fields above (dataclass rule: defaults
+    # follow non-defaults).
+    hit_at_5_content: float | None = None
+    citation_accuracy_content: float | None = None
     # Raw per-Q records (for debugging; written separately to a JSONL)
     per_question: list[dict[str, Any]] = field(default_factory=list)
 
@@ -180,17 +196,22 @@ def run_experiment(
     top_k: int | None = None,
     ragas_batch_size: int = 10,
     per_q_out: Path | None = None,
+    per_q_out_full: bool = False,
 ) -> ExperimentResult:
     """Run one experiment end-to-end and return an ExperimentResult.
 
     The function:
     1. Builds the in-memory index for the eval filings
     2. For each Q: retrieve top-K, generate an answer, capture metrics
-    3. Computes hit@5, citation_accuracy, mean_latency (custom)
+    3. Computes hit@5, citation_accuracy, mean_latency (custom, chunk_id-based)
+       AND hit_at_5_content, citation_accuracy_content (content-anchored)
 
     If `per_q_out` is provided, each per-Q record is appended to that
     JSONL file as it's computed, so a long run survives a crash and you
-    can monitor progress.
+    can monitor progress. The booleans `hit_at_5_content` and
+    `citation_accuracy_content` are always written. If `per_q_out_full`
+    is True, the per-Q record also includes `retrieved_chunk_texts`
+    (bulky — ~10 KB/Q — opt in for debugging, not for production runs).
 
     4. Calls ragas.evaluate() for context_recall/faithfulness/answer_relevancy
     5. Returns an ExperimentResult ready to append to experiments.csv
@@ -214,6 +235,10 @@ def run_experiment(
     ragas_rows: list[dict[str, Any]] = []
     hit_count = 0
     citation_hit = 0
+    # Content-anchored accumulators (None means "not measured"; the
+    # frozen exp_001 / exp_002 rows never populated these).
+    hit_count_content = 0
+    citation_hit_content = 0
     latencies: list[int] = []
     total_cost = 0.0
 
@@ -227,6 +252,7 @@ def run_experiment(
         qid = q["id"]
         question = q["question"]
         source_chunk_id = q["source_chunk_id"]
+        source_span = str(q.get("source_span", "") or "").strip()
         ground_truth = q["ground_truth_answer"]
         is_oos = q.get("qa_type") == "out_of_scope"
 
@@ -254,10 +280,30 @@ def run_experiment(
             if source_chunk_id not in retrieved_chunk_ids:
                 hit_count += 1
 
+        # Content-anchored hit@K. For OOS Q's, `source_span` is empty by
+        # design, so a content match is vacuously impossible — we count
+        # the Q as a "hit" (the model correctly returned no source).
+        # This mirrors the OOS branch of the chunk_id-based logic above.
+        hit_at_5_content_this_q: bool
+        if not is_oos and source_span:
+            hit_at_5_content_this_q = any(
+                span_appears_in_chunk(source_span, c.text)
+                for c, _ in retrieved[:top_k]
+            )
+        elif is_oos:
+            # OOS: no span -> trivially "the span isn't in the chunks" == True
+            hit_at_5_content_this_q = not source_span
+        else:
+            # Non-OOS with empty source_span (generator bug); treat as miss
+            hit_at_5_content_this_q = False
+        if hit_at_5_content_this_q:
+            hit_count_content += 1
+
         try:
             gen_result = generator.generate(question, contexts)
             answer_text = gen_result.answer
             generated_chunk_ids = {c.chunk_id for c in gen_result.citations}
+            generated_chunks = list(gen_result.citations)
             total_cost += gen_result.cost_usd
             if is_oos:
                 # For OOS, "citation accuracy" means: did the model NOT cite
@@ -272,21 +318,49 @@ def run_experiment(
             logger.warning(f"[{qid}] generation failed: {e}")
             answer_text = ""
             generated_chunk_ids = set()
+            generated_chunks = []
+
+        # Content-anchored citation accuracy: did the model's cited chunks
+        # contain the source span? For OOS, the model should say "I cannot"
+        # and cite nothing (span is empty, so vacuously no cited chunk has
+        # the span).
+        #
+        # `Citation` only carries `chunk_id` (not `.text`); we look the
+        # text up from `chunk_id_to_text` which was built in
+        # `build_index_for_qa_pairs` from the in-memory index.
+        citation_accuracy_content_this_q: bool
+        if not is_oos and source_span:
+            citation_accuracy_content_this_q = any(
+                span_appears_in_chunk(source_span, chunk_id_to_text.get(c.chunk_id, ""))
+                for c in generated_chunks
+            )
+        elif is_oos:
+            citation_accuracy_content_this_q = "I cannot" in answer_text
+        else:
+            citation_accuracy_content_this_q = False
+        if citation_accuracy_content_this_q:
+            citation_hit_content += 1
 
         latency_ms = int((time.perf_counter() - t_q) * 1000)
         latencies.append(latency_ms)
 
-        per_q.append({
+        per_q_record: dict[str, Any] = {
             "qid": qid,
             "question": question,
             "ground_truth": ground_truth,
             "source_chunk_id": source_chunk_id,
+            "source_span": source_span,
             "qa_type": q.get("qa_type"),
             "retrieved_chunk_ids": retrieved_chunk_ids,
             "generated_chunk_ids": list(generated_chunk_ids),
             "answer": answer_text,
             "latency_ms": latency_ms,
-        })
+            "hit_at_5_content": hit_at_5_content_this_q,
+            "citation_accuracy_content": citation_accuracy_content_this_q,
+        }
+        if per_q_out_full:
+            per_q_record["retrieved_chunk_texts"] = [c.text for c, _ in retrieved]
+        per_q.append(per_q_record)
         # Incremental save: write the per-Q record to disk so we can
         # monitor progress and survive crashes on long runs.
         if per_q_fh is not None:
@@ -311,6 +385,8 @@ def run_experiment(
     n = len(qa_df)
     hit_at_5 = hit_count / n if n else 0.0
     citation_acc = citation_hit / n if n else 0.0
+    hit_at_5_content = hit_count_content / n if n else 0.0
+    citation_accuracy_content = citation_hit_content / n if n else 0.0
     mean_lat = sum(latencies) / len(latencies) if latencies else 0.0
 
     # --- RAGAS scoring -------------------------------------------------
@@ -322,6 +398,8 @@ def run_experiment(
     logger.info(
         f"Experiment {exp_name!r} done in {elapsed:.1f}s. "
         f"hit@5={hit_at_5:.3f}, cite_acc={citation_acc:.3f}, "
+        f"hit@5_content={hit_at_5_content:.3f}, "
+        f"cite_acc_content={citation_accuracy_content:.3f}, "
         f"cr={cr}, fa={fa}, ar={ar}, cost=${total_cost:.4f}"
     )
 
@@ -339,6 +417,8 @@ def run_experiment(
         answer_relevancy=ar,
         hit_at_5=hit_at_5,
         citation_accuracy=citation_acc,
+        hit_at_5_content=hit_at_5_content,
+        citation_accuracy_content=citation_accuracy_content,
         mean_latency_ms=mean_lat,
         total_cost_usd=total_cost,
         per_question=per_q,
