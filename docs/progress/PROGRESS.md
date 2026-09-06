@@ -24,7 +24,7 @@
 | STEP_008 | 2026-09-07 | `c685943` exp_003 full run | exp_003 full 139-Q run (6858 chunks, fa=0.8932 track-best) + CSV 14-col migration + leaderboard refresh | `docs/progress/STEP_008_exp003_full_run.md` | DONE |
 | STEP_009 | 2026-09-07 | `86c2329` OOS sentinel fix | OOS sentinel normalization fix (`normalize_source_span`), smoke-verified OOS flip, no ledger change | `docs/progress/STEP_009_oos_sentinel_fix.md` | DONE |
 | STEP_010 | 2026-09-07 | `45e699b` structural chunker + exp_004 scaffold | Structural chunker (section budgets) + exp_004 scaffold, smoke 0.833 content, 19s index build | `docs/progress/STEP_010_structural_chunker_scaffold.md` | DONE |
-| STEP_011 | 2026-09-07 | PENDING (commit next) | exp_004 full 139-Q run (4952 chunks, content 0.6906 = projection, OOS 1.000) + leaderboard refresh | `docs/progress/STEP_011_exp004_full_run.md` | PENDING — ready to commit |
+| STEP_011 | 2026-09-07 | `d292dfd` exp_004 full run | exp_004 full 139-Q run (4952 chunks, content 0.6906 = projection, OOS 1.000) + leaderboard refresh (also carried user-staged STEP_010 smoke snapshot) | `docs/progress/STEP_011_exp004_full_run.md` | DONE |
 | STEP_012 | — | — | NEXT: Phase 3 retrieval (BM25 → hybrid RRF); ADR-004 first | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
@@ -57,18 +57,18 @@ Week 5-12: NOT STARTED (vectordb, retrieval, RAPTOR, rerank, CRAG, router, cache
 ## Tracking discipline (locked from STEP_007 onward)
 
 - Every implementation = 1 STEP file + 1 PROGRESS.md row + 1 commit (explicit pathspec, never `git add -A`).
-- STEP commits exclude regenerable/ephemeral artifacts (`results/smoke/*`, `data/eval/*.limit*.jsonl`, `.env`/`secrets/`). Settled pattern: the user snapshots notable smoke/limit files in separate commits (`9261360`, `5bd0283`, `b03f4a7` — all smoke/limit only, no code). STEP_00X commits never include them.
+- STEP commits exclude regenerable/ephemeral artifacts (`results/smoke/*`, `data/eval/*.limit*.jsonl`, `.env`/`secrets/`). Settled pattern: the user snapshots notable smoke/limit files in separate commits (`9261360`, `5bd0283`, `b03f4a7` — all three commits are smoke/limit only, no code). New smokes stay untracked until snapshotted (STEP_010's smoke rode along in `d292dfd` because it was user-staged).
 - Canonical ledgers (`results/experiments.csv`, `results/leaderboard.json`, `leaderboard_snapshots/`) change ONLY on full runs + `make leaderboard` — never on smoke.
-- Commit command for STEP_008 (run from project root, PowerShell):
+- Commit template for full-run steps (run from project root, PowerShell; list files explicitly — past instances: STEP_008 §7 in its STEP file, STEP_011 §3 in its STEP file):
 
 ```powershell
 git add results/experiments.csv results/leaderboard.json `
-  results/leaderboard_snapshots/leaderboard_20260907_004003.json `
-  results/exp_003_semantic/per_question.jsonl `
-  docs/experiments/exp_003_semantic/analysis.md `
+  results/leaderboard_snapshots/leaderboard_<ts>.json `
+  results/<exp>/per_question.jsonl `
+  docs/experiments/<exp>/analysis.md `
   docs/progress/PROGRESS.md `
-  docs/progress/STEP_008_exp003_full_run.md
-git commit -m "STEP_008: exp_003 full run (fa=0.8932 best) + CSV 14-col migration + leaderboard refresh"
+  docs/progress/STEP_XXX_<name>.md
+git commit -m "STEP_XXX: <one-line result>"
 ```
 
 ## How to use this log
