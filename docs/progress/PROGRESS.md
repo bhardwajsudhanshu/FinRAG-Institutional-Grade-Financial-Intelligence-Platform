@@ -25,7 +25,7 @@
 | STEP_009 | 2026-09-07 | `86c2329` OOS sentinel fix | OOS sentinel normalization fix (`normalize_source_span`), smoke-verified OOS flip, no ledger change | `docs/progress/STEP_009_oos_sentinel_fix.md` | DONE |
 | STEP_010 | 2026-09-07 | `45e699b` structural chunker + exp_004 scaffold | Structural chunker (section budgets) + exp_004 scaffold, smoke 0.833 content, 19s index build | `docs/progress/STEP_010_structural_chunker_scaffold.md` | DONE |
 | STEP_011 | 2026-09-07 | `d292dfd` exp_004 full run | exp_004 full 139-Q run (4952 chunks, content 0.6906 = projection, OOS 1.000) + leaderboard refresh (also carried user-staged STEP_010 smoke snapshot) | `docs/progress/STEP_011_exp004_full_run.md` | DONE |
-| STEP_012 | 2026-09-07 | PENDING (commit next) | Phase 3 opens: ADR-004 + BM25/RRF paths + retrieval_strategy + 13 tests + exp_020 scaffold, smoke 0.833 | `docs/progress/STEP_012_phase3_bm25_hybrid.md` | PENDING — ready to commit |
+| STEP_012 | 2026-09-07 | `7c2ca42` ADR-004 + BM25/RRF | Phase 3 opens: ADR-004 + BM25/RRF paths + retrieval_strategy + 13 tests + exp_020 scaffold, smoke 0.833 | `docs/progress/STEP_012_phase3_bm25_hybrid.md` | DONE |
 | STEP_013 | — | — | NEXT: exp_020 BM25 full 139-Q run + analysis + leaderboard | TBD | TODO |
 | STEP_012 | — | — | NEXT: Phase 3 retrieval (BM25 → hybrid RRF); ADR-004 first | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
