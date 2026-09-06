@@ -42,6 +42,30 @@ _WHITESPACE_RE = re.compile(r"\s+")
 # paragraph-aware chunking's tendency to split on the next separator.
 _HEAD_PROBE = 100
 
+# Sentinel the Q&A generator writes into `source_span` for out-of-scope Q's
+# (see tests/eval/generate_qa_pairs.py::QA_GEN_PROMPT). The frozen v1 eval
+# set stores the literal string — it is NOT empty. Eval-time code must pass
+# spans through `normalize_source_span` before scoring so the OOS branches
+# in the runner (which test emptiness) behave as designed.
+OOS_SPAN_SENTINEL = "<no relevant span>"
+
+
+def normalize_source_span(span: str | None) -> str:
+    """Map a raw eval-set `source_span` to its scoring form.
+
+    Returns `""` for None, empty/whitespace-only spans, and the
+    `<no relevant span>` OOS sentinel (compared after stripping, exact
+    match — the generator emits it verbatim). Every other span is
+    returned stripped but otherwise verbatim (no case folding: the
+    matcher handles that).
+    """
+    if span is None:
+        return ""
+    s = span.strip()
+    if not s or s == OOS_SPAN_SENTINEL:
+        return ""
+    return s
+
 
 def _normalize(text: str) -> str:
     """Collapse whitespace runs to a single space and lowercase.

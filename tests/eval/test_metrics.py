@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import pytest
 
-from finrag.eval.metrics import span_appears_in_chunk
+from finrag.eval.metrics import normalize_source_span, span_appears_in_chunk
 
 
 class TestDirectMatch:
@@ -179,3 +179,39 @@ class TestRealisticContent:
 )
 def test_parametrized(span, chunk, expected):
     assert span_appears_in_chunk(span, chunk) is expected
+
+
+class TestNormalizeSourceSpan:
+    """Pins the STEP_009 OOS-sentinel fix the runner relies on.
+
+    The frozen v1 set stores the literal "<no relevant span>" string for
+    OOS Q's. The runner's OOS branches test emptiness, so the sentinel
+    must normalize to "" at read time (eval set itself stays frozen).
+    """
+
+    def test_none_returns_empty(self):
+        assert normalize_source_span(None) == ""
+
+    def test_empty_returns_empty(self):
+        assert normalize_source_span("") == ""
+
+    def test_whitespace_only_returns_empty(self):
+        assert normalize_source_span("   \n\t  ") == ""
+
+    def test_sentinel_returns_empty(self):
+        assert normalize_source_span("<no relevant span>") == ""
+
+    def test_sentinel_with_padding_returns_empty(self):
+        assert normalize_source_span("  <no relevant span>\n") == ""
+
+    def test_real_span_passes_through_stripped(self):
+        assert (
+            normalize_source_span("  Apple net sales $383.3B  ")
+            == "Apple net sales $383.3B"
+        )
+
+    def test_near_miss_sentinel_is_not_emptied(self):
+        # Only the exact sentinel normalizes; anything else is a real span
+        # (prevents silently dropping answer-bearing text on a typo).
+        s = "<no relevantSpan>"
+        assert normalize_source_span(s) == s

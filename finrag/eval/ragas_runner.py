@@ -52,7 +52,7 @@ from loguru import logger
 from finrag.chunking import chunk_sections_by_strategy
 from finrag.config import get_settings
 from finrag.data.parse_sections import parse_filing
-from finrag.eval.metrics import span_appears_in_chunk
+from finrag.eval.metrics import normalize_source_span, span_appears_in_chunk
 from finrag.generation import get_generator
 from finrag.retrieval import build_index, retrieve, results_to_citations
 
@@ -252,7 +252,10 @@ def run_experiment(
         qid = q["id"]
         question = q["question"]
         source_chunk_id = q["source_chunk_id"]
-        source_span = str(q.get("source_span", "") or "").strip()
+        # Normalize the OOS sentinel ("<no relevant span>") to "" so the
+        # OOS branches below behave as designed. The frozen v1 set stores
+        # the literal sentinel; see metrics.normalize_source_span (STEP_009).
+        source_span = normalize_source_span(str(q.get("source_span", "") or ""))
         ground_truth = q["ground_truth_answer"]
         is_oos = q.get("qa_type") == "out_of_scope"
 

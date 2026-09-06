@@ -270,8 +270,10 @@ def _span_appears_in_chunk(span: str, chunk_text: str) -> bool:
     Thin wrapper over `finrag.eval.metrics.span_appears_in_chunk` that
     preserves the Q&A generator's `<no relevant span>` sentinel
     convention (the verification step accepts those as a valid empty
-    anchor; the eval-time metrics do not see the sentinel because
-    out-of-scope Q's have `source_span == ""` by design).
+    anchor). NOTE: the frozen v1 set stores the literal sentinel string,
+    not "". Eval-time code must pass spans through
+    `finrag.eval.metrics.normalize_source_span` first (STEP_009) — the
+    runner's OOS branches test emptiness.
     """
     if not span or not chunk_text:
         return False

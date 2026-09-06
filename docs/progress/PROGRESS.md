@@ -21,8 +21,9 @@
 | STEP_005 | 2026-09-05 | `84a88f5` recursive results | exp_002 full run (5412 chunks) + analysis: chunk_id artifact found | `docs/progress/STEP_005_exp002_results.md` | DONE |
 | STEP_006 | 2026-09-06 | `9261360` updated logs | Content-anchored metrics fix: `span_appears_in_chunk`, `hit_at_5_content`, smoke-tested for exp_003 | `docs/progress/STEP_006_content_metrics_fix.md` | DONE |
 | STEP_007 | 2026-09-06 | `b0d510e` semantic chunker + exp_003 scaffold | Semantic chunker + exp_003 scaffold, smoke-verified (5 Q: hit@5_content 0.80 vs 0.40) | `docs/progress/STEP_007_semantic_chunker_scaffold.md` | DONE |
-| STEP_008 | 2026-09-07 | PENDING (commit next) | exp_003 full 139-Q run (6858 chunks, fa=0.8932 track-best) + CSV 14-col migration + leaderboard refresh | `docs/progress/STEP_008_exp003_full_run.md` | PENDING — ready to commit |
-| STEP_009 | — | — | NEXT: OOS placeholder-span matcher fix and/or exp_004 structural | TBD | TODO |
+| STEP_008 | 2026-09-07 | `c685943` exp_003 full run | exp_003 full 139-Q run (6858 chunks, fa=0.8932 track-best) + CSV 14-col migration + leaderboard refresh | `docs/progress/STEP_008_exp003_full_run.md` | DONE |
+| STEP_009 | 2026-09-07 | PENDING (commit next) | OOS sentinel normalization fix (`normalize_source_span`), smoke-verified OOS flip, no ledger change | `docs/progress/STEP_009_oos_sentinel_fix.md` | PENDING — ready to commit |
+| STEP_010 | — | — | NEXT: exp_004 structural chunker (first full run under fixed OOS logic) | TBD | TODO |
 
 ## Current headline numbers (frozen)
 
