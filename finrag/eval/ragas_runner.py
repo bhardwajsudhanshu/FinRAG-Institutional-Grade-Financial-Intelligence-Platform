@@ -54,7 +54,12 @@ from finrag.config import get_settings
 from finrag.data.parse_sections import parse_filing
 from finrag.eval.metrics import normalize_source_span, span_appears_in_chunk
 from finrag.generation import get_generator
-from finrag.retrieval import build_index, retrieve, results_to_citations
+from finrag.retrieval import (
+    build_bm25_index,
+    build_index,
+    results_to_citations,
+    retrieve_with_strategy,
+)
 
 
 # --- Result schema ---------------------------------------------------------
@@ -114,11 +119,16 @@ def _qa_pairs_to_dataframe(qa_path: Path) -> pd.DataFrame:
 def build_index_for_qa_pairs(
     qa_path: Path,
     processed_dir: Path | None = None,
-) -> tuple[Any, pd.DataFrame, dict[str, str]]:
-    """Build the in-memory index for the filings referenced by the Q&A set.
+    strategy: str | None = None,
+) -> tuple[dict, pd.DataFrame, dict[str, str]]:
+    """Build the retrieval bundle for the filings referenced by the Q&A set.
 
-    Returns (index, qa_df, chunk_id_to_text). The chunk_id_to_text map is
-    used to compute hit@5 cheaply.
+    Returns (bundle, qa_df, chunk_id_to_text). `bundle` is a dict with
+    `strategy` ("dense" | "bm25" | "hybrid", default from settings),
+    the built index(es) under `dense` / `bm25` (None when unused),
+    `chunks_by_id` for hybrid fusion lookup, and `n_chunks`.
+    Only the needed index(es) are built: pure-BM25 runs embed nothing.
+    The chunk_id_to_text map is used to compute hit@5 cheaply.
     """
     settings = get_settings()
     processed_dir = processed_dir or settings.data_processed_dir
@@ -173,15 +183,31 @@ def build_index_for_qa_pairs(
             f"  [{key}] parsed {len(sections)} sections, {len(chunks)} chunks "
             f"(chunker={settings.chunker_strategy})"
         )
-    logger.info(f"Total chunks to embed: {len(all_chunks)}")
+    logger.info(f"Total chunks: {len(all_chunks)}")
 
     if not all_chunks:
         raise RuntimeError("No chunks produced for eval set; check filing paths.")
 
-    # Embed + index
-    index = build_index(all_chunks)
+    # Build only the index(es) the strategy needs (ADR-004). Pure-BM25
+    # builds no embeddings: fast and free at retrieval time.
+    if strategy is None:
+        strategy = settings.retrieval_strategy
+    if strategy not in ("dense", "bm25", "hybrid"):
+        raise ValueError(
+            f"Unknown retrieval strategy {strategy!r}. "
+            "Valid options: ['dense', 'bm25', 'hybrid']"
+        )
+    dense_index = build_index(all_chunks) if strategy in ("dense", "hybrid") else None
+    bm25_index = build_bm25_index(all_chunks) if strategy in ("bm25", "hybrid") else None
+    bundle: dict[str, Any] = {
+        "strategy": strategy,
+        "dense": dense_index,
+        "bm25": bm25_index,
+        "chunks_by_id": {c.chunk_id: c for c in all_chunks},
+        "n_chunks": len(all_chunks),
+    }
     chunk_id_to_text = {c.chunk_id: c.text for c in all_chunks}
-    return index, qa_df, chunk_id_to_text
+    return bundle, qa_df, chunk_id_to_text
 
 
 # --- Experiment runner -----------------------------------------------------
@@ -224,9 +250,13 @@ def run_experiment(
         top_k = settings.retrieval_top_k
     t0 = time.perf_counter()
 
-    index, qa_df, chunk_id_to_text = build_index_for_qa_pairs(qa_path)
+    bundle, qa_df, chunk_id_to_text = build_index_for_qa_pairs(qa_path)
+    strategy = bundle["strategy"]
     embed_seconds = time.perf_counter() - t0
-    logger.info(f"Index built in {embed_seconds:.1f}s ({len(index)} chunks)")
+    logger.info(
+        f"Index built in {embed_seconds:.1f}s "
+        f"({bundle['n_chunks']} chunks, retrieval={strategy})"
+    )
 
     generator = get_generator()
 
@@ -261,7 +291,7 @@ def run_experiment(
 
         t_q = time.perf_counter()
         try:
-            retrieved = retrieve(index, question, top_k=top_k)
+            retrieved = retrieve_with_strategy(bundle, question, top_k=top_k)
         except Exception as e:
             logger.warning(f"[{qid}] retrieval failed: {e}")
             retrieved = []
@@ -360,6 +390,7 @@ def run_experiment(
             "latency_ms": latency_ms,
             "hit_at_5_content": hit_at_5_content_this_q,
             "citation_accuracy_content": citation_accuracy_content_this_q,
+            "retrieval_strategy": strategy,
         }
         if per_q_out_full:
             per_q_record["retrieved_chunk_texts"] = [c.text for c, _ in retrieved]
@@ -414,7 +445,7 @@ def run_experiment(
         timestamp=time.strftime("%Y-%m-%dT%H:%M:%S"),
         n_questions=n,
         n_filings=len({q["source_ticker"] + q["source_filing_date"] for _, q in qa_df.iterrows()}),
-        n_chunks=len(index),
+        n_chunks=bundle["n_chunks"],
         context_recall=cr,
         faithfulness=fa,
         answer_relevancy=ar,

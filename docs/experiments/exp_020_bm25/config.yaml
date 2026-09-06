@@ -1,0 +1,36 @@
+exp_name: exp_020_bm25
+description: BM25 lexical baseline over naive chunks (same chunks as exp_001). Ablation before hybrid. No retrieval-time embeddings.
+
+chunker:
+  type: naive_fixed
+  size: 512
+  overlap: 50
+  tokenizer: cl100k_base
+
+embedder:
+  backend: vertex
+  model: text-embedding-005
+  dim: 768
+  note: used for NOTHING at retrieval time under bm25 (generator + RAGAS judge still bill)
+
+retrieval:
+  strategy: bm25
+  backend: rank-bm25
+  class: BM25Okapi
+  tokenizer: regex [a-z0-9]+ lowercase
+  top_k: 5
+
+generator:
+  backend: vertex
+  model: gemini-2.5-flash
+  temperature: 0.0
+
+ragas_judge:
+  llm: gemini-2.5-flash
+  embeddings: text-embedding-005
+
+eval_set:
+  path: data/eval/qa_pairs.jsonl
+  version: v1
+  n_questions: 139
+  n_filings: 20

@@ -25,6 +25,8 @@
 | STEP_009 | 2026-09-07 | `86c2329` OOS sentinel fix | OOS sentinel normalization fix (`normalize_source_span`), smoke-verified OOS flip, no ledger change | `docs/progress/STEP_009_oos_sentinel_fix.md` | DONE |
 | STEP_010 | 2026-09-07 | `45e699b` structural chunker + exp_004 scaffold | Structural chunker (section budgets) + exp_004 scaffold, smoke 0.833 content, 19s index build | `docs/progress/STEP_010_structural_chunker_scaffold.md` | DONE |
 | STEP_011 | 2026-09-07 | `d292dfd` exp_004 full run | exp_004 full 139-Q run (4952 chunks, content 0.6906 = projection, OOS 1.000) + leaderboard refresh (also carried user-staged STEP_010 smoke snapshot) | `docs/progress/STEP_011_exp004_full_run.md` | DONE |
+| STEP_012 | 2026-09-07 | PENDING (commit next) | Phase 3 opens: ADR-004 + BM25/RRF paths + retrieval_strategy + 13 tests + exp_020 scaffold, smoke 0.833 | `docs/progress/STEP_012_phase3_bm25_hybrid.md` | PENDING — ready to commit |
+| STEP_013 | — | — | NEXT: exp_020 BM25 full 139-Q run + analysis + leaderboard | TBD | TODO |
 | STEP_012 | — | — | NEXT: Phase 3 retrieval (BM25 → hybrid RRF); ADR-004 first | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
@@ -51,8 +53,9 @@ Trustworthy cross-chunker signal: content-based same_ticker+section hit@5 = 0.73
 ## Roadmap position
 
 Week 1-2 Foundation: DONE (exp_001 + eval set).
-Week 3-4 Chunking: 3/5 full runs done (exp_002, exp_003, exp_004). No chunker beats naive on context_recall; semantic leads faithfulness; structural leads content-hit + efficiency. exp_005 (late/contextual) DEFERRED per exp_004 decision — next is Phase 3 retrieval.
-Week 5-12: NOT STARTED (vectordb, retrieval, RAPTOR, rerank, CRAG, router, cache, API/UI).
+Week 3-4 Chunking: 3/5 full runs done (exp_002, exp_003, exp_004). No chunker beats naive on context_recall; semantic leads faithfulness; structural leads content-hit + efficiency. exp_005 (late/contextual) DEFERRED per exp_004 decision.
+Week 5-8 Retrieval (OPENED STEP_012): ADR-004 accepted — BM25 ablation (exp_020) then hybrid RRF (exp_021), naive chunks fixed, in-memory only. Retrieval axis live via `retrieval_strategy` setting.
+Week 5-12 rest: NOT STARTED (vectordb, RAPTOR, rerank, CRAG, router, cache, API/UI).
 
 ## Tracking discipline (locked from STEP_007 onward)
 

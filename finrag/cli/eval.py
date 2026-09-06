@@ -131,6 +131,7 @@ def main(
     console.print(f"  Q&A set:    {work_qa}")
     console.print(f"  Backend:    embedder={settings.embedder_backend} generator={settings.generator_backend}")
     console.print(f"  Chunker:    {settings.chunker_strategy}")
+    console.print(f"  Retrieval:  {settings.retrieval_strategy}")
     console.print(f"  top_k:      {top_k}")
 
     # Default per-Q output path: results/<exp>/per_question.jsonl

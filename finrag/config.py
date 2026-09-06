@@ -61,6 +61,11 @@ class Settings(BaseSettings):
 
     # --- Retrieval ---
     retrieval_top_k: int = 5
+    # `retrieval_strategy` picks the retrieval path (ADR-004, Phase 3).
+    #   - "dense"  : cosine over Vertex/Mock embeddings (exp_001-004 path)
+    #   - "bm25"   : lexical BM25 only, embeds nothing (exp_020)
+    #   - "hybrid" : dense + BM25 fused with RRF k=60 (exp_021)
+    retrieval_strategy: str = "dense"
     embedding_dim: int = 768
 
     # --- Logging / cost tracking ---
