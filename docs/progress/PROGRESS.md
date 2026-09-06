@@ -23,7 +23,7 @@
 | STEP_007 | 2026-09-06 | `b0d510e` semantic chunker + exp_003 scaffold | Semantic chunker + exp_003 scaffold, smoke-verified (5 Q: hit@5_content 0.80 vs 0.40) | `docs/progress/STEP_007_semantic_chunker_scaffold.md` | DONE |
 | STEP_008 | 2026-09-07 | `c685943` exp_003 full run | exp_003 full 139-Q run (6858 chunks, fa=0.8932 track-best) + CSV 14-col migration + leaderboard refresh | `docs/progress/STEP_008_exp003_full_run.md` | DONE |
 | STEP_009 | 2026-09-07 | `86c2329` OOS sentinel fix | OOS sentinel normalization fix (`normalize_source_span`), smoke-verified OOS flip, no ledger change | `docs/progress/STEP_009_oos_sentinel_fix.md` | DONE |
-| STEP_010 | 2026-09-07 | PENDING (commit next) | Structural chunker (section budgets) + exp_004 scaffold, smoke 0.833 content, 19s index build | `docs/progress/STEP_010_structural_chunker_scaffold.md` | PENDING — ready to commit |
+| STEP_010 | 2026-09-07 | `45e699b` structural chunker + exp_004 scaffold | Structural chunker (section budgets) + exp_004 scaffold, smoke 0.833 content, 19s index build | `docs/progress/STEP_010_structural_chunker_scaffold.md` | DONE |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
 ## Current headline numbers (frozen)
