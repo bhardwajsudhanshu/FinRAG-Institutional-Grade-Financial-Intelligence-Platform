@@ -43,12 +43,13 @@
 | STEP_020 | 2026-09-07 | `c8d8051` FastAPI serving | FastAPI serving (health/ask/leaderboard, 8 tests, make serve) + optional-embedder threading + machine-env finding | `docs/progress/STEP_020_fastapi_serving.md` | DONE |
 | STEP_021 | 2026-09-07 | `305c196` Streamlit demo | Streamlit demo on API (ask + citations + health + leaderboard, 10 tests) | `docs/progress/STEP_021_streamlit_demo.md` | DONE |
 | STEP_022 | 2026-09-07 | `6f0d873` ADR-006 + rerank | Rerank phase: ADR-006 + Flash pointwise scorer + runner wiring + exp_030 scaffold, smoke 0.833 | `docs/progress/STEP_022_rerank_flash_pointwise.md` | DONE |
-| STEP_023 | — | — | NEXT: exp_030 full 139-Q run (~1.5h, ~$0.15) + gap verdict + leaderboard | TBD | TODO |
+| STEP_023 | 2026-09-07 | PENDING (commit next) | exp_030 full 139-Q rerank run (gap closed: cite 0.61->0.73, 5/5 sweep, $0.171 all-in) + reranker category defined | `docs/progress/STEP_023_exp030_full_run.md` | PENDING — ready to commit |
+| STEP_024 | — | — | NEXT: exp_031 MiniLM (cheap leadership?) or API best-answer flag or nightly drift job | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
 ## Current headline numbers (frozen)
 
-From `results/experiments.csv` (7 rows, 14-col schema since STEP_008):
+From `results/experiments.csv` (8 rows, 14-col schema since STEP_008):
 
 - `exp_001_naive_baseline`: 139 Q, 20 filings, 4447 chunks, context_recall=0.8058, faithfulness=0.8847, answer_relevancy=0.7428, hit@5=0.6043, cite_acc=0.5612, latency 8731ms, $0.038 (content cols empty — frozen before fix)
 - `exp_002_recursive`: 139 Q, 20 filings, 5412 chunks, context_recall=0.7913, faithfulness=0.8595, answer_relevancy=0.7080, hit@5=0.3237 (artifact), cite_acc=0.2158 (artifact), latency 9968ms, $0.0299 (content cols empty — frozen)
@@ -57,8 +58,9 @@ From `results/experiments.csv` (7 rows, 14-col schema since STEP_008):
 - `exp_020_bm25`: 139 Q, 20 filings, 4447 chunks (= exp_001, pure retrieval effect), context_recall=0.7238, faithfulness=0.8604, answer_relevancy=0.6670, hit@5=**0.6115 (best, valid)**, cite_acc=0.5396, **hit@5_content=0.7194 (best)**, cite_content=**0.7050 (best)**, latency **4374ms (fastest)**, $0.0354
 - `exp_021_hybrid_rrf`: 139 Q, 20 filings, 4447 chunks, context_recall=**0.8843 (best, +8pp)**, faithfulness=**0.9063 (best)**, answer_relevancy=**0.7496 (best)**, hit@5=**0.6763 (best)**, cite_acc=**0.6115 (best)**, **hit@5_content=0.8129 (best)**, cite_content=**0.7986 (best)**, latency 8961ms, $0.0366
 - `exp_022_hybrid_qdrant`: 139 Q, 20 filings, 4447 chunks, cr=0.8760/fa=0.8979/ar=0.7587 (RAGAS ±noise vs exp_021), customs IDENTICAL (0.6763/0.6115/0.8129/0.7986), **139/139 identical retrieved sets**, latency 7824ms (-1.1s/Q), $0.0365 — parity proof, deployable as-is
+- `exp_030_flash_rerank`: 139 Q, 20 filings, 4447 chunks, cr=**0.9132**, fa=**0.9574**, ar=**0.7864**, hit@5=**0.7770** (+10.1pp), cite=**0.7266** (+11.5pp), content **0.8849** (+7.2pp), cite_content **0.8561**, 41966ms/Q, row $0.038 / **all-in $0.1714** — gap closed (RANKING), 5/5 sweep
 
-Leaders (`results/leaderboard.json` @ 2026-09-07T10:05:51): **SWEEP — exp_021_hybrid_rrf leads all four decided categories** (chunking/retrieval cr=0.8843; chunking_content 0.8129; end_to_end fa=0.9063). exp_022 parity-confirms it (identical customs, RAGAS ±noise) without dethroning.
+Leaders (`results/leaderboard.json` @ 2026-09-07T13:02:01): **SWEEP 5/5 — exp_030_flash_rerank leads every decided category** (cr=0.9132; content 0.8849; cite 0.7266; fa=0.9574). Only `vectordb` null (ops track, no latency columns by design).
 Trustworthy cross-chunker signal: content-based same_ticker+section hit@5 = 0.734 (exp_001) vs 0.741 (exp_002) — see `docs/experiments/exp_002_recursive/analysis.md`.
 
 ## Data on disk (as of 2026-09-07)
@@ -66,7 +68,7 @@ Trustworthy cross-chunker signal: content-based same_ticker+section hit@5 = 0.73
 - `data/raw/`: ~50+ 10-K HTML files (AAPL/MSFT/GOOGL have 3-4y; BAC/GS/JPM only 1 filing each — ingest incomplete, see STEP_003).
 - `data/eval/qa_pairs.jsonl`: v1 frozen, 139 Q (67 lookup, 45 section, 9 synthesis, 18 OOS), 20 tickers.
 - `data/runtime_costs.jsonl`: per-call cost log (all Vertex calls, incl. both STEP_008 attempts).
-- `results/exp_001_naive_baseline/`, `exp_002_recursive/`, `exp_003_semantic/`, `exp_004_structural/`, `exp_020_bm25/`, `exp_021_hybrid_rrf/`, `exp_022_hybrid_qdrant/per_question.jsonl`: per-Q audit trail (139 rows each).
+- `results/exp_001_naive_baseline/`, `exp_002_recursive/`, `exp_003_semantic/`, `exp_004_structural/`, `exp_020_bm25/`, `exp_021_hybrid_rrf/`, `exp_022_hybrid_qdrant/`, `exp_030_flash_rerank/per_question.jsonl`: per-Q audit trail (139 rows each).
 - `results/smoke/*` + `results/benchmarks/*` + `data/eval/*.limit*.jsonl`: ephemeral instrument outputs, snapshotted by the user in `9261360` (metric-fix smokes), `5bd0283` (STEP_007 smoke), `b03f4a7` (STEP_009 smoke + limit6 slice) — all three commits are smoke/limit only, no code. New outputs stay untracked until snapshotted (STEP_010's smoke rode along in `d292dfd` because it was user-staged).
 
 ## Roadmap position
@@ -76,7 +78,7 @@ Week 3-4 Chunking: 3/5 full runs done (exp_002, exp_003, exp_004). No chunker be
 Week 5-8 Retrieval (Phase-3 in-memory COMPLETE STEP_015): hybrid RRF sweeps all 4 categories (cr 0.8843, content 0.8129, fa 0.9063). Production retrieval path = naive chunks + hybrid RRF.
 Vector-DB benchmark (STEP_016 opened, STEP_017 decided live, STEP_018-019 wired+proven): **production = naive + hybrid RRF + live Qdrant** (parity 139/139, -1.1s/Q). Weaviate faster (p95 9.7ms) but parity 0.95 FAILS locked gates (ef rematch possible). No ledger rows for ops benchmarks (schema mismatch). `make docker-up` verified from scratch (3 compose fixes: modules crash-loop, 1.25.5→1.27.7 skew, gRPC port).
 Product surface (STEP_020 API + STEP_021 demo): FastAPI (`api/`, health/ask/leaderboard, `make serve`/`serve-qdrant`) + Streamlit (`ui/`, `make ui`, `FINRAG_API_URL` override); 119 tests green. Machine-env warning: OS exports `VECTORDB_BACKEND=chroma` (beats `.env` in pydantic-settings; user should delete it — invalid value, crashes non-overridden runs; full-run commands must pin all four vars).
-Rerank phase (OPENED STEP_022): ADR-006 accepted — pointwise Flash first (top-10→5, ~$0.15/run), cross-encoder deferred as challenger; falsifiable gap-closing rule.
+Rerank phase (STEP_022 opened, STEP_023 won): Flash pointwise closes the gap (cite 0.61->0.73, recall 0.88->0.91 too) — 5/5 sweep, all-in $0.171/run. Rerank ON for leadership, OFF by default for cost. Next: exp_031 MiniLM (cheap leadership?) or product polish.
 Week 5-12 rest: NOT STARTED (vectordb, RAPTOR, rerank, CRAG, router, cache, API/UI).
 
 ## Tracking discipline (locked from STEP_007 onward)

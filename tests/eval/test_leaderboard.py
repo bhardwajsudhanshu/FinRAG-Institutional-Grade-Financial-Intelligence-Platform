@@ -242,3 +242,44 @@ def test_chunking_content_category_populated_after_exp_003(tmp_path: Path) -> No
     e3 = next(e for e in lb["experiments"] if e["exp_name"] == "exp_003_semantic")
     assert e3["hit_at_5_content"] == 0.78
     assert e3["citation_accuracy_content"] == 0.72
+
+
+def test_reranker_category_scores_citation_accuracy(tmp_path: Path) -> None:
+    """STEP_023 (ADR-006 promise): the reranker track reads
+    `citation_accuracy` — reranking reorders, so the citation rate is its
+    direct readout. Highest cite wins, runner-up recorded.
+    """
+    csv_path = tmp_path / "experiments.csv"
+    out_path = tmp_path / "leaderboard.json"
+    snap_dir = tmp_path / "snapshots"
+    _write_csv(csv_path, [
+        {
+            "exp_name": "exp_021_hybrid_rrf",
+            "timestamp": "2026-09-07T07:13:22",
+            "n_questions": "139", "n_filings": "20", "n_chunks": "4447",
+            "context_recall": "0.8843", "faithfulness": "0.9063", "answer_relevancy": "0.7496",
+            "hit_at_5": "0.6763", "citation_accuracy": "0.6115",
+            "mean_latency_ms": "8961.5", "total_cost_usd": "0.0366",
+            "hit_at_5_content": "0.8129", "citation_accuracy_content": "0.7986",
+        },
+        {
+            "exp_name": "exp_030_flash_rerank",
+            "timestamp": "2026-09-07T13:02:01",
+            "n_questions": "139", "n_filings": "20", "n_chunks": "4447",
+            "context_recall": "0.9132", "faithfulness": "0.9574", "answer_relevancy": "0.7864",
+            "hit_at_5": "0.7770", "citation_accuracy": "0.7266",
+            "mean_latency_ms": "41966.4", "total_cost_usd": "0.0380",
+            "hit_at_5_content": "0.8849", "citation_accuracy_content": "0.8561",
+        },
+    ])
+    import subprocess
+    subprocess.run(
+        [sys.executable, str(_ROOT / "tests" / "eval" / "update_leaderboard.py"),
+         "--csv", str(csv_path), "--out", str(out_path), "--snapshot-dir", str(snap_dir)],
+        check=True,
+    )
+    lb = json.loads(out_path.read_text(encoding="utf-8"))
+    assert lb["categories"]["reranker"]["metric"] == "citation_accuracy"
+    assert lb["categories"]["reranker"]["winner"] == "exp_030_flash_rerank"
+    assert lb["categories"]["reranker"]["winner_value"] == 0.7266
+    assert lb["categories"]["reranker"]["runner_up"] == "exp_021_hybrid_rrf"

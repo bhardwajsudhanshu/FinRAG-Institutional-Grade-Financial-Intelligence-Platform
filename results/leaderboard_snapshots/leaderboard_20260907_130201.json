@@ -27,10 +27,10 @@
       "metric": "context_recall"
     },
     "reranker": {
-      "winner": "exp_030_flash_rerank",
-      "winner_value": 0.7266187050359713,
-      "runner_up": "exp_021_hybrid_rrf",
-      "metric": "citation_accuracy"
+      "winner": null,
+      "winner_value": null,
+      "runner_up": null,
+      "metric": "hit_at_10"
     },
     "end_to_end": {
       "winner": "exp_030_flash_rerank",

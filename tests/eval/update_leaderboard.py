@@ -43,12 +43,16 @@ LEADERBOARD_SCHEMA_VERSION = "1.0"
 # first chunker that populates the content-anchored columns lands, the
 # `chunking_content` category will report `winner: null`, which is
 # intentional (it's a "not yet measured" sentinel, not an error).
+# `reranker` scores `citation_accuracy` (locked 2026-09-07, STEP_023,
+# per ADR-006's promise): reranking only reorders retrieved chunks, so
+# the citation rate is its direct readout. Fair across rows because every
+# reranked run uses naive chunks (chunk_id metrics stay valid there).
 CATEGORY_CONFIG: dict[str, dict[str, Any]] = {
     "chunking": {"metric": "context_recall", "ascending": False, "primary": True},
     "chunking_content": {"metric": "hit_at_5_content", "ascending": False, "primary": False},
     "vectordb": {"metric": "p95_latency_ms", "ascending": True, "primary": False},
     "retrieval": {"metric": "context_recall", "ascending": False, "primary": False},
-    "reranker": {"metric": "hit_at_10", "ascending": False, "primary": False},
+    "reranker": {"metric": "citation_accuracy", "ascending": False, "primary": False},
     "end_to_end": {"metric": "faithfulness", "ascending": False, "primary": True},
 }
 
