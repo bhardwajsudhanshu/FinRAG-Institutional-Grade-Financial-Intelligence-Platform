@@ -44,7 +44,7 @@
 | STEP_021 | 2026-09-07 | `305c196` Streamlit demo | Streamlit demo on API (ask + citations + health + leaderboard, 10 tests) | `docs/progress/STEP_021_streamlit_demo.md` | DONE |
 | STEP_022 | 2026-09-07 | `6f0d873` ADR-006 + rerank | Rerank phase: ADR-006 + Flash pointwise scorer + runner wiring + exp_030 scaffold, smoke 0.833 | `docs/progress/STEP_022_rerank_flash_pointwise.md` | DONE |
 | STEP_023 | 2026-09-07 | `1e6d787` exp_030 full run | exp_030 full 139-Q rerank run (gap closed: cite 0.61->0.73, 5/5 sweep, $0.171 all-in) + reranker category defined | `docs/progress/STEP_023_exp030_full_run.md` | DONE |
-| STEP_024 | 2026-09-07 | PENDING (commit next) | MiniLM cross-encoder challenger (torch CPU, 4 tests) + exp_031 scaffold, smoke 0.833 in ~half Flash time | `docs/progress/STEP_024_minilm_challenger.md` | PENDING — ready to commit |
+| STEP_024 | 2026-09-07 | `7716c59` MiniLM challenger | MiniLM cross-encoder challenger (torch CPU, 4 tests) + exp_031 scaffold, smoke 0.833 in ~half Flash time | `docs/progress/STEP_024_minilm_challenger.md` | DONE |
 | STEP_025 | — | — | NEXT: exp_031 full 139-Q run (~50 min, $0 scoring) + verdict vs exp_030 + leaderboard | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
