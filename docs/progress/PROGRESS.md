@@ -30,7 +30,7 @@
 | STEP_014 | 2026-09-07 | `6b536d8` gen fix + hybrid scaffold | Multi-part generation fix (6 tests) + exp_021 hybrid scaffold, smoke 0.833 | `docs/progress/STEP_014_gen_fix_hybrid_scaffold.md` | DONE |
 | STEP_015 | 2026-09-07 | `f254df4` exp_021 full run | exp_021 full 139-Q hybrid run (SWEEP all 4 categories: cr 0.8843, content 0.8129) + leaderboard refresh | `docs/progress/STEP_015_exp021_full_run.md` | DONE |
 | STEP_016 | 2026-09-07 | `3f59594` ADR-005 + vectordb | Vector-DB phase: ADR-005 + backend interface + Qdrant :memory: (parity 1.0, p95 41.8ms ~39×) + harness + exp_050 | `docs/progress/STEP_016_vectordb_interface_qdrant.md` | DONE |
-| STEP_017 | 2026-09-07 | PENDING (commit next) | Live docker: Qdrant canonical (p95 30.5ms, parity 1.0, APPROVED) + Weaviate impl (p95 9.7ms but parity 0.95 FAIL) + 3 compose fixes | `docs/progress/STEP_017_live_docker_benchmarks.md` | PENDING — ready to commit |
+| STEP_017 | 2026-09-07 | `55416b9` live docker benchmarks | Live docker: Qdrant canonical (p95 30.5ms, parity 1.0, APPROVED) + Weaviate impl (p95 9.7ms but parity 0.95 FAIL) + 3 compose fixes | `docs/progress/STEP_017_live_docker_benchmarks.md` | DONE |
 | STEP_018 | — | — | NEXT: Qdrant-in-runner wiring (parity end-to-end) and/or Weaviate ef rematch / Vertex Search | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
