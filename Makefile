@@ -3,7 +3,7 @@
 # All commands assume you're in the project root and have uv installed.
 # The venv lives in .venv/ on F: drive; uv cache at F:/.uv-cache.
 
-.PHONY: help install setup env dev test lint format ingest ingest-sample query eval ui serve docker-up docker-down docker-logs clean vertex-check
+.PHONY: help install setup env dev test lint format ingest ingest-sample query eval eval-smoke eval-nightly nightly-smoke drift-check ui serve serve-qdrant docker-up docker-down docker-logs clean vertex-check patch-ragas
 
 help: ## Show this help
 	@uv run python -c "import re; print('\n'.join(sorted(re.findall(r'^([a-zA-Z_-]+):.*?## (.*)', open('Makefile').read(), re.MULTILINE))))"
@@ -41,6 +41,13 @@ eval-smoke: ## Run eval on the first 5 Q's (no full eval set required)
 eval-nightly: ## Full eval run + leaderboard refresh (for nightly cron)
 	uv run python -m finrag.cli.eval --exp exp_001_naive_baseline
 	uv run python tests/eval/update_leaderboard.py
+
+nightly-smoke: ## Cheap nightly guard: hybrid 10-Q smoke + drift check vs exp_021 (~$$0.005, ~5 min)
+	CHUNKER_STRATEGY=naive RETRIEVAL_STRATEGY=hybrid RERANK_BACKEND=none VECTORDB_BACKEND=in-memory uv run python -m finrag.cli.eval --exp nightly_guard --limit 10 --smoke
+	uv run python scripts/check_drift.py --ledger results/experiments.csv --baseline-exp exp_021_hybrid_rrf --candidate results/smoke --alert-log results/drift_alerts.jsonl
+
+drift-check: ## Compare any candidate CSV against a ledger baseline (usage: make drift-check CAND=path BASE=exp_021_hybrid_rrf)
+	uv run python scripts/check_drift.py --ledger results/experiments.csv --baseline-exp $(BASE) --candidate $(CAND)
 
 leaderboard: ## Rebuild results/leaderboard.json + write an immutable snapshot
 	uv run python tests/eval/update_leaderboard.py
