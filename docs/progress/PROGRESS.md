@@ -27,7 +27,7 @@
 | STEP_011 | 2026-09-07 | `d292dfd` exp_004 full run | exp_004 full 139-Q run (4952 chunks, content 0.6906 = projection, OOS 1.000) + leaderboard refresh (also carried user-staged STEP_010 smoke snapshot) | `docs/progress/STEP_011_exp004_full_run.md` | DONE |
 | STEP_012 | 2026-09-07 | `7c2ca42` ADR-004 + BM25/RRF | Phase 3 opens: ADR-004 + BM25/RRF paths + retrieval_strategy + 13 tests + exp_020 scaffold, smoke 0.833 | `docs/progress/STEP_012_phase3_bm25_hybrid.md` | DONE |
 | STEP_013 | 2026-09-07 | `3d926e6` exp_020 full run | exp_020 full 139-Q BM25 run (4447 chunks, content-hit leader 0.7194, recall trailer 0.7238) + leaderboard refresh | `docs/progress/STEP_013_exp020_full_run.md` | DONE |
-| STEP_014 | 2026-09-07 | PENDING (commit next) | Multi-part generation fix (6 tests) + exp_021 hybrid scaffold, smoke 0.833 | `docs/progress/STEP_014_gen_fix_hybrid_scaffold.md` | PENDING — ready to commit |
+| STEP_014 | 2026-09-07 | `6b536d8` gen fix + hybrid scaffold | Multi-part generation fix (6 tests) + exp_021 hybrid scaffold, smoke 0.833 | `docs/progress/STEP_014_gen_fix_hybrid_scaffold.md` | DONE |
 | STEP_015 | — | — | NEXT: exp_021 hybrid full 139-Q run + analysis + leaderboard | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
