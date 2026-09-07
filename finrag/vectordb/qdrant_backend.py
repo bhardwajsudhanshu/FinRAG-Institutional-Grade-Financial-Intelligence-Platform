@@ -82,3 +82,28 @@ class QdrantBackend(VectorDBBackend):
     @property
     def _debug_client(self) -> Any:
         return self._client
+
+
+class QdrantDenseIndex:
+    """Drop-in for `InMemoryIndex` backed by a live Qdrant collection.
+
+    The eval runner's dense path calls `index.query(qvec, top_k)` and
+    expects `[(Chunk, score)]`; Qdrant returns ids, so this adapter maps
+    them back through `chunks_by_id`. Scores are Qdrant cosine (parity
+    1.0 with brute force, STEP_017).
+    """
+
+    def __init__(self, backend: QdrantBackend, chunks_by_id: dict) -> None:
+        self._backend = backend
+        self._chunks_by_id = chunks_by_id
+
+    def __len__(self) -> int:
+        return len(self._backend)
+
+    def query(self, query_embedding: list[float], top_k: int = 5) -> list[tuple]:
+        out = []
+        for cid, score in self._backend.query(query_embedding, top_k=top_k):
+            chunk = self._chunks_by_id.get(cid)
+            if chunk is not None:
+                out.append((chunk, score))
+        return out

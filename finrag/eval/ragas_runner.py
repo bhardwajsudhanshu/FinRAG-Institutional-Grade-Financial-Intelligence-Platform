@@ -197,17 +197,55 @@ def build_index_for_qa_pairs(
             f"Unknown retrieval strategy {strategy!r}. "
             "Valid options: ['dense', 'bm25', 'hybrid']"
         )
-    dense_index = build_index(all_chunks) if strategy in ("dense", "hybrid") else None
+    chunks_by_id = {c.chunk_id: c for c in all_chunks}
+    dense_index = None
+    if strategy in ("dense", "hybrid"):
+        dense_index = _build_dense_index(all_chunks, chunks_by_id, settings)
     bm25_index = build_bm25_index(all_chunks) if strategy in ("bm25", "hybrid") else None
     bundle: dict[str, Any] = {
         "strategy": strategy,
         "dense": dense_index,
         "bm25": bm25_index,
-        "chunks_by_id": {c.chunk_id: c for c in all_chunks},
+        "chunks_by_id": chunks_by_id,
         "n_chunks": len(all_chunks),
+        "vectordb_backend": settings.vectordb_backend,
     }
     chunk_id_to_text = {c.chunk_id: c.text for c in all_chunks}
     return bundle, qa_df, chunk_id_to_text
+
+
+def _build_dense_index(all_chunks: list, chunks_by_id: dict, settings) -> Any:
+    """Build the dense side on the configured vector store (STEP_018).
+
+    - "in-memory": brute-force cosine (all frozen rows; $0, slow).
+    - "qdrant": embed once, upsert to live Qdrant, return a
+      `QdrantDenseIndex` adapter with the identical `.query` interface,
+      so the rest of the pipeline can't tell the difference (parity 1.0,
+      STEP_017). Collection "finrag_eval" is recreated per run — nightly
+      runs are serial, so no cross-run clash.
+    """
+    if settings.vectordb_backend == "in-memory":
+        return build_index(all_chunks)
+    if settings.vectordb_backend == "qdrant":
+        from finrag.embeddings import get_embedder
+        from finrag.vectordb import QdrantBackend, QdrantDenseIndex
+
+        embedder = get_embedder()
+        vectors = embedder.embed_batch([c.text for c in all_chunks])
+        qb = QdrantBackend(dim=embedder.dim, collection="finrag_eval",
+                           location=settings.qdrant_url)
+        qb.upsert(
+            [c.chunk_id for c in all_chunks],
+            vectors,
+            payloads=[{"ticker": c.metadata.get("ticker", ""),
+                       "section_id": c.metadata.get("section_id", "")}
+                      for c in all_chunks],
+        )
+        return QdrantDenseIndex(qb, chunks_by_id)
+    raise ValueError(
+        f"Unknown vectordb backend {settings.vectordb_backend!r}. "
+        "Valid options: ['in-memory', 'qdrant']"
+    )
 
 
 # --- Experiment runner -----------------------------------------------------
@@ -391,6 +429,7 @@ def run_experiment(
             "hit_at_5_content": hit_at_5_content_this_q,
             "citation_accuracy_content": citation_accuracy_content_this_q,
             "retrieval_strategy": strategy,
+            "vectordb_backend": bundle["vectordb_backend"],
         }
         if per_q_out_full:
             per_q_record["retrieved_chunk_texts"] = [c.text for c, _ in retrieved]

@@ -23,7 +23,7 @@ if str(_ROOT) not in sys.path:
 import pytest
 
 from finrag.embeddings import MockEmbedder
-from finrag.vectordb import QdrantBackend, VectorDBBackend, WeaviateBackend
+from finrag.vectordb import QdrantBackend, QdrantDenseIndex, VectorDBBackend, WeaviateBackend
 
 qdrant_client = pytest.importorskip("qdrant_client")
 
@@ -148,6 +148,51 @@ class TestMathSanity:
     def test_mock_vectors_are_unit_norm(self, embedder: MockEmbedder) -> None:
         v = embedder.embed("Apple net sales were $383.3B.")
         assert abs(math.sqrt(sum(x * x for x in v)) - 1.0) < 1e-9
+
+
+# --- QdrantDenseIndex adapter (STEP_018; :memory:, offline) --------------------
+
+
+class TestQdrantDenseIndex:
+    def _adapter(self, embedder: MockEmbedder,
+                 corpus_ids: list[str], corpus_texts: list[str]) -> QdrantDenseIndex:
+        from finrag.chunking import Chunk
+
+        vecs = _embed_all(embedder, corpus_texts)
+        by_id = {cid: Chunk(chunk_id=cid, text=t, metadata={"ticker": "T"})
+                 for cid, t in zip(corpus_ids, corpus_texts, strict=True)}
+        backend = QdrantBackend(dim=embedder.dim, collection="test_adapter")
+        backend.upsert(corpus_ids, vecs)
+        return QdrantDenseIndex(backend, by_id)
+
+    def test_query_returns_chunk_objects(self, embedder: MockEmbedder,
+                                         corpus_ids: list[str],
+                                         corpus_texts: list[str]) -> None:
+        from finrag.chunking import Chunk
+
+        idx = self._adapter(embedder, corpus_ids, corpus_texts)
+        assert len(idx) == 3
+        hits = idx.query(embedder.embed("Microsoft Azure revenue"), top_k=1)
+        assert len(hits) == 1
+        chunk, score = hits[0]
+        assert isinstance(chunk, Chunk)
+        assert chunk.chunk_id == "MSFT_item7::0000"
+        assert isinstance(score, float)
+
+    def test_empty_top_k_safe(self, embedder: MockEmbedder,
+                              corpus_ids: list[str],
+                              corpus_texts: list[str]) -> None:
+        idx = self._adapter(embedder, corpus_ids, corpus_texts)
+        assert idx.query(embedder.embed("q"), top_k=0) == []
+
+    def test_unknown_vectordb_backend_rejected(self) -> None:
+        import types
+
+        from finrag.eval.ragas_runner import _build_dense_index
+
+        settings = types.SimpleNamespace(vectordb_backend="does_not_exist")
+        with pytest.raises(ValueError):
+            _build_dense_index([], {}, settings)
 
 
 # --- WeaviateBackend (live server; skipped when Docker is down) ----------------

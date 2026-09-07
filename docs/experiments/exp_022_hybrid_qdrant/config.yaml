@@ -1,0 +1,41 @@
+exp_name: exp_022_hybrid_qdrant
+description: Hybrid RRF with live-Qdrant dense side (parity end-to-end vs exp_021 brute-force). Production configuration candidate.
+
+chunker:
+  type: naive_fixed
+  size: 512
+  overlap: 50
+  tokenizer: cl100k_base
+
+embedder:
+  backend: vertex
+  model: text-embedding-005
+  dim: 768
+
+retrieval:
+  strategy: hybrid
+  dense_top_k: 20
+  bm25_top_k: 20
+  rrf_k: 60
+  final_top_k: 5
+
+vectordb:
+  backend: qdrant
+  url: http://localhost:6333
+  collection: finrag_eval  # recreated per run
+  distance: cosine
+
+generator:
+  backend: vertex
+  model: gemini-2.5-flash
+  temperature: 0.0
+
+ragas_judge:
+  llm: gemini-2.5-flash
+  embeddings: text-embedding-005
+
+eval_set:
+  path: data/eval/qa_pairs.jsonl
+  version: v1
+  n_questions: 139
+  n_filings: 20

@@ -55,8 +55,14 @@ class Settings(BaseSettings):
     chunk_size_tokens: int = 512
     chunk_overlap_tokens: int = 50
 
-    # --- Vector DB ---
-    vectordb_backend: str = "chroma"
+    # --- Vector DB (STEP_018: live backends enter the eval path) ---
+    # `vectordb_backend` picks the dense store behind `dense`/`hybrid`
+    # retrieval. "chroma" was the scaffold default but was never
+    # implemented or read anywhere — the real default is "in-memory".
+    #   - "in-memory": brute-force cosine (all frozen rows; $0, slow)
+    #   - "qdrant"   : live Qdrant at `qdrant_url` (parity-proven, STEP_017)
+    vectordb_backend: str = "in-memory"
+    qdrant_url: str = "http://localhost:6333"
     chroma_persist_dir: Path = Path("./data/chroma")
 
     # --- Retrieval ---

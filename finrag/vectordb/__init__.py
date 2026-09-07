@@ -14,7 +14,7 @@ same ranking out (parity with `InMemoryIndex`, verified by tests).
 from __future__ import annotations
 
 from finrag.vectordb.base import VectorDBBackend
-from finrag.vectordb.qdrant_backend import QdrantBackend
+from finrag.vectordb.qdrant_backend import QdrantBackend, QdrantDenseIndex
 from finrag.vectordb.weaviate_backend import WeaviateBackend
 
-__all__ = ["QdrantBackend", "VectorDBBackend", "WeaviateBackend"]
+__all__ = ["QdrantBackend", "QdrantDenseIndex", "VectorDBBackend", "WeaviateBackend"]
