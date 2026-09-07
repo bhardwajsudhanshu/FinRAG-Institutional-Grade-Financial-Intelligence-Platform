@@ -14,7 +14,7 @@
 ## Sync status (tracked from STEP_017 onward)
 
 - Pushed through: `2a1e847` (STEP_016 index DONE) — STEP_001–016 all on `origin/main`, verified 2026-09-07 (`git rev-list --count origin/main..HEAD` baseline).
-- Unpushed: `55416b9` + `43221ee` + `60542ab` (STEP_017) + `0a32737` + `e212e79` (STEP_018). Push with `git push origin main`.
+- Push state: pushed through `2a1e847` (STEP_016). Everything after that is unpushed — verify live with `git log origin/main..HEAD --oneline` (this line is updated on pushes, and may lag the newest index micro-commit by one; the git command is always truth).
 - Rule: after every push, update this section (move the boundary). After every STEP commit, the new commit(s) join Unpushed until pushed.
 
 ## Index
