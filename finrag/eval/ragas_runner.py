@@ -290,10 +290,17 @@ def run_experiment(
 
     bundle, qa_df, chunk_id_to_text = build_index_for_qa_pairs(qa_path)
     strategy = bundle["strategy"]
+    from finrag.rerank import get_reranker
+
+    reranker = get_reranker()
+    # Rerank needs a wider net than the final top_k (ADR-006: 10 -> 5).
+    # "none" keeps the frozen fetch width (== top_k) exactly.
+    fetch_k = settings.rerank_candidates if settings.rerank_backend != "none" else top_k
     embed_seconds = time.perf_counter() - t0
     logger.info(
         f"Index built in {embed_seconds:.1f}s "
-        f"({bundle['n_chunks']} chunks, retrieval={strategy})"
+        f"({bundle['n_chunks']} chunks, retrieval={strategy}, "
+        f"rerank={settings.rerank_backend})"
     )
 
     generator = get_generator()
@@ -329,7 +336,8 @@ def run_experiment(
 
         t_q = time.perf_counter()
         try:
-            retrieved = retrieve_with_strategy(bundle, question, top_k=top_k)
+            retrieved = retrieve_with_strategy(bundle, question, top_k=fetch_k)
+            retrieved = reranker.rerank(question, retrieved, top_k)
         except Exception as e:
             logger.warning(f"[{qid}] retrieval failed: {e}")
             retrieved = []
@@ -430,6 +438,7 @@ def run_experiment(
             "citation_accuracy_content": citation_accuracy_content_this_q,
             "retrieval_strategy": strategy,
             "vectordb_backend": bundle["vectordb_backend"],
+            "reranker": settings.rerank_backend,
         }
         if per_q_out_full:
             per_q_record["retrieved_chunk_texts"] = [c.text for c, _ in retrieved]

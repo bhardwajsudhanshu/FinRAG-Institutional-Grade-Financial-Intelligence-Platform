@@ -74,6 +74,13 @@ class Settings(BaseSettings):
     retrieval_strategy: str = "dense"
     embedding_dim: int = 768
 
+    # --- Re-rank (ADR-006, Phase 5) ---
+    # `rerank_backend`: "none" (identity, all frozen rows) |
+    # "flash-pointwise" (Flash scores 0-10 per candidate, exp_030).
+    rerank_backend: str = "none"
+    # Candidates fetched for the reranker; top_k (5) kept after scoring.
+    rerank_candidates: int = 10
+
     # --- Logging / cost tracking ---
     cost_log_path: Path = Path("./data/runtime_costs.jsonl")
     log_level: str = "INFO"

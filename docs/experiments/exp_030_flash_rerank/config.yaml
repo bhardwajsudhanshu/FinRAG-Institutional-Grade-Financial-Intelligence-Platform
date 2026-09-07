@@ -1,0 +1,42 @@
+exp_name: exp_030_flash_rerank
+description: Pointwise Flash re-rank (top-10 -> top-5) over hybrid retrieval. Tests whether the recall-citation gap is ranking, not generation.
+
+chunker:
+  type: naive_fixed
+  size: 512
+  overlap: 50
+  tokenizer: cl100k_base
+
+embedder:
+  backend: vertex
+  model: text-embedding-005
+  dim: 768
+
+retrieval:
+  strategy: hybrid
+  dense_top_k: 20
+  bm25_top_k: 20
+  rrf_k: 60
+  fetch_top_k: 10  # candidates for the reranker
+
+rerank:
+  backend: flash-pointwise
+  model: gemini-2.5-flash
+  candidates: 10
+  final_top_k: 5
+  tie_break: retrieval_score_then_rank
+
+generator:
+  backend: vertex
+  model: gemini-2.5-flash
+  temperature: 0.0
+
+ragas_judge:
+  llm: gemini-2.5-flash
+  embeddings: text-embedding-005
+
+eval_set:
+  path: data/eval/qa_pairs.jsonl
+  version: v1
+  n_questions: 139
+  n_filings: 20
