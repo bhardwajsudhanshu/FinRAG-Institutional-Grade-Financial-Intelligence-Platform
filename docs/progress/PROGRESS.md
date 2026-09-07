@@ -39,7 +39,7 @@
 | STEP_016 | 2026-09-07 | `3f59594` ADR-005 + vectordb | Vector-DB phase: ADR-005 + backend interface + Qdrant :memory: (parity 1.0, p95 41.8ms ~39×) + harness + exp_050 | `docs/progress/STEP_016_vectordb_interface_qdrant.md` | DONE |
 | STEP_017 | 2026-09-07 | `55416b9` live docker benchmarks | Live docker: Qdrant canonical (p95 30.5ms, parity 1.0, APPROVED) + Weaviate impl (p95 9.7ms but parity 0.95 FAIL) + 3 compose fixes | `docs/progress/STEP_017_live_docker_benchmarks.md` | DONE |
 | STEP_018 | 2026-09-07 | `0a32737` Qdrant in eval path | Qdrant in eval path (`vectordb_backend` + adapter + exp_022 scaffold), smoke hybrid+Qdrant 0.833, live .env fixed | `docs/progress/STEP_018_qdrant_in_runner.md` | DONE |
-| STEP_019 | 2026-09-07 | PENDING (commit next) | exp_022 full 139-Q hybrid+Qdrant run (139/139 identical sets, metrics identical, -1.1s/Q) + batching fix | `docs/progress/STEP_019_exp022_full_run.md` | PENDING — ready to commit |
+| STEP_019 | 2026-09-07 | `66e48ef` exp_022 full run | exp_022 full 139-Q hybrid+Qdrant run (139/139 identical sets, metrics identical, -1.1s/Q) + batching fix | `docs/progress/STEP_019_exp022_full_run.md` | DONE |
 | STEP_020 | — | — | NEXT: FastAPI serving (deployable now) or rerank phase or Vertex Search pre-deploy | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
