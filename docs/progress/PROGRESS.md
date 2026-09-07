@@ -29,7 +29,7 @@
 | STEP_013 | 2026-09-07 | `3d926e6` exp_020 full run | exp_020 full 139-Q BM25 run (4447 chunks, content-hit leader 0.7194, recall trailer 0.7238) + leaderboard refresh | `docs/progress/STEP_013_exp020_full_run.md` | DONE |
 | STEP_014 | 2026-09-07 | `6b536d8` gen fix + hybrid scaffold | Multi-part generation fix (6 tests) + exp_021 hybrid scaffold, smoke 0.833 | `docs/progress/STEP_014_gen_fix_hybrid_scaffold.md` | DONE |
 | STEP_015 | 2026-09-07 | `f254df4` exp_021 full run | exp_021 full 139-Q hybrid run (SWEEP all 4 categories: cr 0.8843, content 0.8129) + leaderboard refresh | `docs/progress/STEP_015_exp021_full_run.md` | DONE |
-| STEP_016 | 2026-09-07 | PENDING (commit next) | Vector-DB phase: ADR-005 + backend interface + Qdrant :memory: (parity 1.0, p95 41.8ms ~39×) + harness + exp_050 | `docs/progress/STEP_016_vectordb_interface_qdrant.md` | PENDING — ready to commit |
+| STEP_016 | 2026-09-07 | `3f59594` ADR-005 + vectordb | Vector-DB phase: ADR-005 + backend interface + Qdrant :memory: (parity 1.0, p95 41.8ms ~39×) + harness + exp_050 | `docs/progress/STEP_016_vectordb_interface_qdrant.md` | DONE |
 | STEP_017 | — | — | NEXT: live docker benchmark (needs Docker Desktop up) + Weaviate impl + canonical exp_050 row | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
