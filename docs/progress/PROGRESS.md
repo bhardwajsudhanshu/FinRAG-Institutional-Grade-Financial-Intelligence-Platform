@@ -47,7 +47,7 @@
 | STEP_024 | 2026-09-07 | `7716c59` MiniLM challenger | MiniLM cross-encoder challenger (torch CPU, 4 tests) + exp_031 scaffold, smoke 0.833 in ~half Flash time | `docs/progress/STEP_024_minilm_challenger.md` | DONE |
 | STEP_025 | 2026-09-07 | `d1d694b` exp_031 full run | exp_031 full 139-Q run (challenger LOSES: 0.770 < hybrid 0.813, MiniLM retired, phase closed) | `docs/progress/STEP_025_exp031_full_run.md` | DONE |
 | STEP_026 | 2026-09-07 | `ef874f8` API best-answer | API best-answer mode (rerank flag + UI checkbox, 3 tests) — cheap default + flagship per request | `docs/progress/STEP_026_api_best_answer.md` | DONE |
-| STEP_027 | 2026-09-07 | PENDING (commit next) | Nightly drift guard (checker + scheduler entry + runbook, 17 tests, live DRIFT-OK) | `docs/progress/STEP_027_nightly_drift_guard.md` | PENDING — ready to commit |
+| STEP_027 | 2026-09-07 | `108f8bf` drift guard | Nightly drift guard (checker + scheduler entry + runbook, 17 tests, live DRIFT-OK) | `docs/progress/STEP_027_nightly_drift_guard.md` | DONE |
 | STEP_028 | — | — | NEXT: deploy polish (README sells the sweep) or Vertex Search or parent-doc retrieval | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
