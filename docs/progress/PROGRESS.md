@@ -29,7 +29,8 @@
 | STEP_013 | 2026-09-07 | `3d926e6` exp_020 full run | exp_020 full 139-Q BM25 run (4447 chunks, content-hit leader 0.7194, recall trailer 0.7238) + leaderboard refresh | `docs/progress/STEP_013_exp020_full_run.md` | DONE |
 | STEP_014 | 2026-09-07 | `6b536d8` gen fix + hybrid scaffold | Multi-part generation fix (6 tests) + exp_021 hybrid scaffold, smoke 0.833 | `docs/progress/STEP_014_gen_fix_hybrid_scaffold.md` | DONE |
 | STEP_015 | 2026-09-07 | `f254df4` exp_021 full run | exp_021 full 139-Q hybrid run (SWEEP all 4 categories: cr 0.8843, content 0.8129) + leaderboard refresh | `docs/progress/STEP_015_exp021_full_run.md` | DONE |
-| STEP_016 | — | — | NEXT: vector-DB benchmark (ADR-005 first, quality frozen, measures latency/ops) | TBD | TODO |
+| STEP_016 | 2026-09-07 | PENDING (commit next) | Vector-DB phase: ADR-005 + backend interface + Qdrant :memory: (parity 1.0, p95 41.8ms ~39×) + harness + exp_050 | `docs/progress/STEP_016_vectordb_interface_qdrant.md` | PENDING — ready to commit |
+| STEP_017 | — | — | NEXT: live docker benchmark (needs Docker Desktop up) + Weaviate impl + canonical exp_050 row | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
 ## Current headline numbers (frozen)
@@ -52,13 +53,14 @@ Trustworthy cross-chunker signal: content-based same_ticker+section hit@5 = 0.73
 - `data/eval/qa_pairs.jsonl`: v1 frozen, 139 Q (67 lookup, 45 section, 9 synthesis, 18 OOS), 20 tickers.
 - `data/runtime_costs.jsonl`: per-call cost log (all Vertex calls, incl. both STEP_008 attempts).
 - `results/exp_001_naive_baseline/`, `exp_002_recursive/`, `exp_003_semantic/`, `exp_004_structural/`, `exp_020_bm25/`, `exp_021_hybrid_rrf/per_question.jsonl`: per-Q audit trail (139 rows each).
-- `results/smoke/*` + `data/eval/*.limit*.jsonl`: ephemeral proofs, snapshotted by the user in `9261360` (metric-fix smokes), `5bd0283` (STEP_007 smoke), `b03f4a7` (STEP_009 smoke + limit6 slice) — all three commits are smoke/limit only, no code. New smokes stay untracked until snapshotted.
+- `results/smoke/*` + `results/benchmarks/*` + `data/eval/*.limit*.jsonl`: ephemeral instrument outputs, snapshotted by the user in `9261360` (metric-fix smokes), `5bd0283` (STEP_007 smoke), `b03f4a7` (STEP_009 smoke + limit6 slice) — all three commits are smoke/limit only, no code. New outputs stay untracked until snapshotted (STEP_010's smoke rode along in `d292dfd` because it was user-staged).
 
 ## Roadmap position
 
 Week 1-2 Foundation: DONE (exp_001 + eval set).
 Week 3-4 Chunking: 3/5 full runs done (exp_002, exp_003, exp_004). No chunker beats naive on context_recall; semantic leads faithfulness; structural leads content-hit + efficiency. exp_005 (late/contextual) DEFERRED per exp_004 decision.
-Week 5-8 Retrieval (Phase-3 in-memory COMPLETE STEP_015): hybrid RRF sweeps all 4 categories (cr 0.8843, content 0.8129, fa 0.9063). Production retrieval path = naive chunks + hybrid RRF. Next: vector-DB benchmark behind the frozen quality bar (latency/ops only).
+Week 5-8 Retrieval (Phase-3 in-memory COMPLETE STEP_015): hybrid RRF sweeps all 4 categories (cr 0.8843, content 0.8129, fa 0.9063). Production retrieval path = naive chunks + hybrid RRF.
+Vector-DB benchmark (OPENED STEP_016): ADR-005 accepted — Qdrant `:memory:` preview passes all gates (parity 1.0/1.0, p95 41.8ms ~39× brute-force, $0). Docker daemon DOWN (user starts Desktop for live runs); clients installed. Next: live docker numbers + Weaviate + canonical exp_050 row.
 Week 5-12 rest: NOT STARTED (vectordb, RAPTOR, rerank, CRAG, router, cache, API/UI).
 
 ## Tracking discipline (locked from STEP_007 onward)

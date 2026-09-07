@@ -1,0 +1,22 @@
+exp_name: exp_050_qdrant
+description: Qdrant latency/parity benchmark over 4447 naive chunks (quality frozen at hybrid). Mock embeddings, no LLM calls.
+
+store:
+  backend: qdrant
+  mode: memory  # :memory: preview; docker URL for the live run
+  collection: finrag_bench
+  distance: cosine
+  dim: 768
+
+vectors:
+  chunks: naive_512_50  # same 4447 as exp_001/020/021
+  embedder: mock  # provenance-free for latency/parity
+
+queries:
+  n: 139  # all eval question texts, no generation
+  top_k: 5
+
+decision:
+  parity_top1_rate_min: 0.99
+  parity_set_overlap_min: 0.99
+  p95_ms_max: 100
