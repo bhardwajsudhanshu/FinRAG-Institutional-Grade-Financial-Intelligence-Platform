@@ -1,91 +1,129 @@
 # FinRAG — Institutional-Grade Financial Intelligence Platform
 
-> **A production-grade Retrieval-Augmented Generation (RAG) system over SEC 10-K/10-Q filings, designed for sub-second financial question answering with citations.**
+> **Production-grade RAG over SEC 10-K filings: hybrid retrieval + re-ranked, cited answers with an auditable experiment ledger. 9 benchmarked experiments, 160 tests, 0 known failures.**
 
 ---
 
-## Why this exists
+## What it does
 
-Financial documents — 10-Ks, 10-Qs, earnings call transcripts — are dense, structured, and full of cross-references. A single missed clause on "geopolitical risk" or "inventory write-down" can cost millions. FinRAG is built to:
+Ask a financial question, get a cited answer:
 
-- **Index** 20 companies × 3 years of SEC filings (~200 documents, ~100K chunks)
-- **Retrieve** the exact clauses that answer a financial question, with metadata filters by ticker and year
-- **Generate** cited answers using Google's Gemini 2.5 family on Vertex AI
-- **Benchmark** every component — chunking strategies, vector databases, retrieval pipelines — against a 200-question eval set with RAGAS
+```bash
+make serve  # terminal 1 — hybrid retrieval over 20 companies' 10-Ks
+make ui     # terminal 2 — dashboard at localhost:8501
+```
 
-It's a 12-week project that goes from a naive baseline to an auto-routed, re-ranked, semantically-cached production system. Every experiment is recorded in `docs/experiments/` so the design decisions are auditable and explainable.
+> "What was Apple's revenue in FY2023?"
+> → "Apple's net sales for fiscal year 2023 were $383.3 billion. [AAPL_2025-10-31_item_8::0023]"
 
----
+Every answer carries chunk-level citations, token counts, and dollar cost. Every design decision carries an experiment folder with frozen config, raw results, and analysis.
+
+## Results (the sweep)
+
+139-Q frozen eval set (v1: 67 lookup, 45 section, 9 synthesis, 18 out-of-scope), RAGAS-judged + content-anchored custom metrics:
+
+| Experiment | Retrieval | context_recall | faithfulness | hit@5_content | citation_acc |
+|---|---|---|---|---|---|
+| exp_001 naive baseline | dense | 0.8058 | 0.8847 | — | 0.5612 |
+| exp_002 recursive chunking | dense | 0.7913 | 0.8595 | — | 0.2158 |
+| exp_003 semantic chunking | dense | 0.7562 | 0.8932 | 0.5612 | 0.2302 |
+| exp_004 structural chunking | dense | 0.7727 | 0.8826 | 0.6906 | 0.2806 |
+| exp_020 BM25 | bm25 | 0.7238 | 0.8604 | 0.7194 | 0.5396 |
+| exp_021 hybrid RRF | hybrid | 0.8843 | 0.9063 | 0.8129 | 0.6115 |
+| exp_022 hybrid + live Qdrant | hybrid | 0.8760 | 0.8979 | 0.8129 | 0.6115 |
+| **exp_030 + Flash re-rank** | hybrid+rerank | **0.9132** | **0.9574** | **0.8849** | **0.7266** |
+| exp_031 MiniLM re-rank | hybrid+rerank | 0.8430 | 0.8887 | 0.7698 | 0.5683 |
+
+Headlines: hybrid sweeps dense/BM25 alone; live Qdrant reproduces brute-force **139/139 exactly** at 30ms p95; Flash re-rank closes the recall↔citation gap (+11.5pp citations) but costs $0.17/run — so rerank is ON for leadership, OFF by default; ms-marco MiniLM **hurts** on 10-K language (retired, honestly). Full story per experiment in `docs/experiments/`; live table in `results/leaderboard.json`.
+
+## Architecture
+
+```
+SEC EDGAR → parse (Item 1/1A/7/7A/8) → naive 512/50 chunks → embed (text-embedding-005)
+        ├── dense side:  in-memory (dev) or Qdrant :6333 (prod, parity-proven)
+        └── lexical side: BM25 (rank-bm25, free)
+                → hybrid RRF k=60 (top-20 + top-20 → top-5)
+                → optional Flash pointwise re-rank (top-10 → top-5, best-answer mode)
+                → Gemini 2.5 Flash answer with [chunk_id] citations + cost log
+Eval: frozen 139-Q set → RAGAS + content metrics → results/experiments.csv (append-only)
+Ops: nightly drift guard (make nightly-smoke) vs exp_021 baseline · serve via FastAPI · demo via Streamlit
+```
 
 ## Quickstart
 
 ```bash
-# 1. Set up the environment (creates .venv on F: drive, redirects uv cache to F:)
+# 1. Environment (.venv + caches on F: drive)
 make env
+cp .env.example .env   # mocks work offline; set GCP_PROJECT_ID + backends for Vertex
 
-# 2. Copy and edit environment config (use mocks until you wire Vertex)
-cp .env.example .env
-
-# 3. Start local infrastructure (Qdrant, Weaviate, Redis, Postgres)
+# 2. Local infra (Qdrant, Weaviate, Redis, Postgres)
 make docker-up
 
-# 4. Ingest one sample filing (Apple 10-K FY2023) and run the smoke test
+# 3. Smoke test: ingest + ask (mock or Vertex per .env)
 make ingest-sample
 make query Q="What are Apple's main risk factors?"
+
+# 4. Serve + demo (hybrid retrieval; needs Vertex creds)
+make serve            # API at localhost:8000 (hybrid over in-memory)
+make serve-qdrant     # same, dense side on live Qdrant (needs docker-up)
+make ui               # dashboard at localhost:8501 (needs make serve running)
+
+# 5. Verify + guard
+uv run pytest tests -q          # 160 tests, $0
+make nightly-smoke              # 10-Q hybrid guard + drift check vs exp_021 (~$0.005)
 ```
 
-Expected output:
-```
-Answer: Apple Inc. identifies the following principal risk factors: ...
-[1] AAPL_10K_2023_Item1A (cosine=0.72)
-[2] AAPL_10K_2023_Item1A (cosine=0.68)
-Tokens: 4,231 in / 312 out. Cost: $0.0021.
-```
-
----
+Two Windows gotchas (both recorded in the build log): delete any machine-level `VECTORDB_BACKEND` env var (OS env beats `.env`), and set `HF_HOME=F:/.hf-cache` before MiniLM runs to keep models off C:.
 
 ## Project structure
 
 ```
+api/                     # FastAPI: health / ask(+rerank flag) / leaderboard
+ui/                      # Streamlit dashboard (calls the API)
 finrag/
-├── finrag/                 # core package (ingest, chunk, embed, retrieve, generate)
-├── docs/                   # documentation, ADRs, experiment records
-│   ├── decisions/          # Architecture Decision Records (the "story")
-│   └── experiments/        # one folder per experiment — hypothesis, config, results, analysis
-├── results/                # leaderboard, experiments.csv, RAGAS nightly runs
-├── tests/                  # pytest suite + RAGAS eval harness
-├── ui/                     # Streamlit dashboard
-├── api/                    # FastAPI service
-├── docker-compose.yml      # Qdrant, Weaviate, Redis, Postgres
-├── pyproject.toml          # deps + uv config (cache on F: drive)
-└── Makefile                # common commands
+├── chunking.py          # naive / recursive / semantic / structural + dispatch
+├── embeddings.py        # mock (offline) / Vertex text-embedding-005
+├── retrieval.py         # dense + BM25 + hybrid RRF + strategy dispatch
+├── rerank.py            # noop / Flash pointwise / MiniLM cross-encoder
+├── vectordb/            # backend ABC + Qdrant + Weaviate (:memory: → docker)
+├── generation.py        # mock / Vertex Flash (multi-part safe)
+├── eval/                # RAGAS runner + content-anchored metrics
+├── data/                # SEC ingest + 10-K section parser
+├── cli/                 # ingest / ask / eval CLIs
+└── config.py            # everything ambient, everything overridable
+docs/
+├── 00_overview.md 01_setup.md 02_nightly_ops.md 03_deploy.md
+├── decisions/           # ADR-001…006 — the why, before the code
+├── experiments/         # exp_001…031 — hypothesis, frozen config, results, analysis
+└── progress/            # STEP_001…027 — bit-by-bit build log (start here to recall anything)
+results/                 # experiments.csv (append-only) + leaderboard + snapshots + per-Q JSONL
+scripts/                 # check_drift.py, nightly.ps1, benchmark_vectordb.py, vertex auth
+tests/                   # 160 unit tests (offline) + eval harness
 ```
 
----
+## Roadmap status (honest)
 
-## The 12-week roadmap
-
-| Week | Phase | What we build |
-|------|-------|---------------|
-| 1–2 | Foundation | Repo, SEC scraper, naive baseline, 200-Q eval set, RAGAS |
-| 3–4 | Chunking | 5 strategies: recursive, semantic, structural, late, contextual |
-| 5–6 | Vector DBs | ChromaDB vs Qdrant vs Weaviate vs Vertex AI Vector Search |
-| 7–8 | Retrieval | Dense, BM25, hybrid RRF, multi-query, parent-doc, HyDE, late-chunking |
-| 9 | Indexing | RAPTOR hierarchical trees |
-| 10 | Post-retrieval | Cross-encoder rerank, sentence-window, CRAG with web fallback |
-| 11 | Product | Auto-router, Redis semantic cache, FastAPI |
-| 12 | Polish | Streamlit dashboard, README, deploy guide |
-
-Every week produces **at least one new experiment folder** with frozen config, raw results, and analysis. The "story" of how we got from naive baseline to production is the `docs/decisions/` ADRs.
-
----
+| Phase | Status |
+|---|---|
+| Foundation (eval set, RAGAS, baseline) | DONE — exp_001 |
+| Chunking (recursive/semantic/structural) | DONE — naive still leads recall; late/contextual deferred (no signal needs them) |
+| Retrieval (BM25 → hybrid RRF) | DONE — hybrid sweeps |
+| Vector DBs (Qdrant ✓, Weaviate measured, Vertex Search deferred to pre-deploy) | DONE for serving |
+| Re-rank (Flash wins, MiniLM retired) | DONE |
+| Product (FastAPI + best-answer mode + Streamlit) | DONE |
+| Ops (nightly drift guard) | DONE |
+| Open | Vertex Search benchmark, parent-doc/multi-query retrieval, nightly cron activation, auto-router/semantic cache |
 
 ## Why these choices?
 
-See `docs/decisions/`:
 - [ADR-001: Why SEC filings](docs/decisions/adr_001_topic_choice.md)
 - [ADR-002: Why Vertex AI](docs/decisions/adr_002_google_stack.md)
-- ADR-003, 004, 005… written as we make the choices, with data
+- [ADR-003: Eval methodology](docs/decisions/adr_003_eval_methodology.md)
+- [ADR-004: Retrieval direction](docs/decisions/adr_004_retrieval_direction.md)
+- [ADR-005: Vector-DB benchmark](docs/decisions/adr_005_vectordb_benchmark.md)
+- [ADR-006: Re-rank direction](docs/decisions/adr_006_rerank_direction.md)
+
+New here? Read [`docs/progress/PROGRESS.md`](docs/progress/PROGRESS.md) — the chronological index of all 27 build steps.
 
 ---
 

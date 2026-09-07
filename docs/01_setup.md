@@ -98,7 +98,7 @@ We don't touch that system setting from this project.
 ## 6. Verifying the install
 
 ```bash
-make test         # runs pytest (no tests yet, will pass)
+make test         # 160 unit tests (offline, $0)
 make lint         # ruff check
 make query Q="What was Apple's revenue in FY2023?"
 ```
