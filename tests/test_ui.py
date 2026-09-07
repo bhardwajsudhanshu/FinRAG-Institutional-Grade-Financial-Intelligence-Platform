@@ -46,6 +46,19 @@ class TestQueryApi:
         monkeypatch.setattr(httpx, "post", lambda *a, **k: _Resp(200, payload))
         assert query_api("Revenue?", top_k=5) == payload
 
+    def test_rerank_flag_reaches_api(self, monkeypatch) -> None:
+        seen: dict = {}
+
+        def fake_post(url, json=None, **k):
+            seen.clear()
+            seen.update(json or {})
+            return _Resp(200, {"answer": "A", "citations": []})
+        monkeypatch.setattr(httpx, "post", fake_post)
+        query_api("Revenue?", top_k=5, rerank=True)
+        assert seen.get("rerank") is True
+        query_api("Revenue?")
+        assert seen.get("rerank") is False
+
     def test_connection_error_is_human(self, monkeypatch) -> None:
         def boom(*a, **k):
             raise httpx.ConnectError("refused")

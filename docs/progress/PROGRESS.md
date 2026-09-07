@@ -46,7 +46,8 @@
 | STEP_023 | 2026-09-07 | `1e6d787` exp_030 full run | exp_030 full 139-Q rerank run (gap closed: cite 0.61->0.73, 5/5 sweep, $0.171 all-in) + reranker category defined | `docs/progress/STEP_023_exp030_full_run.md` | DONE |
 | STEP_024 | 2026-09-07 | `7716c59` MiniLM challenger | MiniLM cross-encoder challenger (torch CPU, 4 tests) + exp_031 scaffold, smoke 0.833 in ~half Flash time | `docs/progress/STEP_024_minilm_challenger.md` | DONE |
 | STEP_025 | 2026-09-07 | `d1d694b` exp_031 full run | exp_031 full 139-Q run (challenger LOSES: 0.770 < hybrid 0.813, MiniLM retired, phase closed) | `docs/progress/STEP_025_exp031_full_run.md` | DONE |
-| STEP_026 | — | — | NEXT: API best-answer flag, nightly drift job, or Vertex Search pre-deploy | TBD | TODO |
+| STEP_026 | 2026-09-07 | PENDING (commit next) | API best-answer mode (rerank flag + UI checkbox, 3 tests) — cheap default + flagship per request | `docs/progress/STEP_026_api_best_answer.md` | PENDING — ready to commit |
+| STEP_027 | — | — | NEXT: nightly drift job, Vertex Search pre-deploy, or README/deploy polish | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
 ## Current headline numbers (frozen)
@@ -80,7 +81,7 @@ Week 1-2 Foundation: DONE (exp_001 + eval set).
 Week 3-4 Chunking: 3/5 full runs done (exp_002, exp_003, exp_004). No chunker beats naive on context_recall; semantic leads faithfulness; structural leads content-hit + efficiency. exp_005 (late/contextual) DEFERRED per exp_004 decision.
 Week 5-8 Retrieval (Phase-3 in-memory COMPLETE STEP_015): hybrid RRF sweeps all 4 categories (cr 0.8843, content 0.8129, fa 0.9063). Production retrieval path = naive chunks + hybrid RRF.
 Vector-DB benchmark (STEP_016 opened, STEP_017 decided live, STEP_018-019 wired+proven): **production = naive + hybrid RRF + live Qdrant** (parity 139/139, -1.1s/Q). Weaviate faster (p95 9.7ms) but parity 0.95 FAILS locked gates (ef rematch possible). No ledger rows for ops benchmarks (schema mismatch). `make docker-up` verified from scratch (3 compose fixes: modules crash-loop, 1.25.5→1.27.7 skew, gRPC port).
-Product surface (STEP_020 API + STEP_021 demo): FastAPI (`api/`, health/ask/leaderboard, `make serve`/`serve-qdrant`) + Streamlit (`ui/`, `make ui`, `FINRAG_API_URL` override); 119 tests green. Machine-env warning: OS exports `VECTORDB_BACKEND=chroma` (beats `.env` in pydantic-settings; user should delete it — invalid value, crashes non-overridden runs; full-run commands must pin all four vars).
+Product surface (STEP_020 API + STEP_021 demo + STEP_026 best-answer): FastAPI (health/ask/leaderboard, cheap default + `rerank=true` flagship) + Streamlit (checkbox); 143 tests green (3 Weaviate skips when Docker down — by design). Machine-env warning: OS exports `VECTORDB_BACKEND=chroma` (beats `.env` in pydantic-settings; user should delete it — invalid value, crashes non-overridden runs; full-run commands must pin all four vars).
 Rerank phase (STEP_022 opened, STEP_023 won, STEP_025 closed): Flash pointwise closes the gap (cite 0.61->0.73, recall 0.88->0.91 too) — 5/5 sweep, all-in $0.171/run. MiniLM challenger LOSES (0.770 < hybrid 0.813 — ms-marco ≠ 10-K language, retired). Rerank ON for leadership, OFF by default for cost.
 Week 5-12 rest: NOT STARTED (vectordb, RAPTOR, rerank, CRAG, router, cache, API/UI).
 

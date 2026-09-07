@@ -50,11 +50,12 @@ def _bundle() -> tuple[dict, MockGenerator]:
     return bundle, MockGenerator()
 
 
-def _client() -> TestClient:
+def _client(reranker=None) -> TestClient:
     bundle, gen = _bundle()
     app = create_app(bundle=bundle, generator=gen,
                      chunk_id_to_text={c.chunk_id: c.text for c in
-                                       bundle["chunks_by_id"].values()})
+                                       bundle["chunks_by_id"].values()},
+                     reranker=reranker)
     return TestClient(app)
 
 
@@ -106,6 +107,33 @@ class TestAsk:
         with _client() as client:
             r = client.post("/ask", json={"question": "Revenue?", "top_k": 99})
             assert r.status_code == 422
+
+
+class TestBestAnswerMode:
+    def test_default_is_not_reranked(self) -> None:
+        with _client() as client:
+            r = client.post("/ask", json={
+                "question": "Apple net sales were $383.3 billion in fiscal 2023."})
+            assert r.status_code == 200
+            assert r.json()["reranked"] is False
+
+    def test_rerank_flag_reorders_via_injected_reranker(self) -> None:
+        from finrag.rerank import NoopReranker
+
+        class ReverseReranker(NoopReranker):
+            def rerank(self, question, items, top_k=5):
+                return list(reversed(items[:top_k]))
+
+        with _client(reranker=ReverseReranker()) as client:
+            plain = client.post("/ask", json={
+                "question": "Apple net sales were $383.3 billion in fiscal 2023."}).json()
+            best = client.post("/ask", json={
+                "question": "Apple net sales were $383.3 billion in fiscal 2023.",
+                "rerank": True}).json()
+            assert best["reranked"] is True
+            plain_ids = [c["chunk_id"] for c in plain["citations"]]
+            best_ids = [c["chunk_id"] for c in best["citations"]]
+            assert best_ids == list(reversed(plain_ids))
 
 
 class TestLeaderboard:

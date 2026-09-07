@@ -21,12 +21,13 @@ def api_url() -> str:
     return os.environ.get("FINRAG_API_URL", "http://localhost:8000").rstrip("/")
 
 
-def query_api(question: str, top_k: int = 5, timeout_s: float = 180.0) -> dict:
+def query_api(question: str, top_k: int = 5, rerank: bool = False,
+              timeout_s: float = 180.0) -> dict:
     """POST /ask. Raises RuntimeError with a human message on any failure."""
     try:
         resp = httpx.post(f"{api_url()}/ask",
-                          json={"question": question, "top_k": top_k},
-                          timeout=timeout_s)
+                          json={"question": question, "top_k": top_k, "rerank": rerank},
+                          timeout=timeout_s if not rerank else max(timeout_s, 300.0))
     except httpx.ConnectError as e:
         raise RuntimeError(
             f"API unreachable at {api_url()} — start it with `make serve`."
@@ -88,13 +89,15 @@ def main() -> None:
     question = st.text_input("Ask about 10-K filings",
                              value="What was Apple's revenue in FY2023?")
     top_k = st.slider("Top-K chunks", min_value=1, max_value=20, value=5)
+    rerank = st.checkbox("Best answer (Flash re-rank, ~30s, bills scoring calls)",
+                         value=False)
     if st.button("Ask", type="primary"):
         if not question.strip():
             st.error("Please enter a question.")
             return
         with st.spinner("Retrieving + generating..."):
             try:
-                res = query_api(question, top_k=top_k)
+                res = query_api(question, top_k=top_k, rerank=rerank)
             except RuntimeError as e:
                 st.error(str(e))
                 return
@@ -110,7 +113,8 @@ def main() -> None:
             st.caption("No citations — the model refused (out-of-scope question?).")
         st.caption(f"Model {res.get('model', '?')} · "
                    f"{res.get('input_tokens', 0)} in / {res.get('output_tokens', 0)} out tokens · "
-                   f"${res.get('cost_usd', 0.0):.4f} · {res.get('latency_ms', 0)}ms")
+                   f"${res.get('cost_usd', 0.0):.4f} · {res.get('latency_ms', 0)}ms"
+                   + (" · re-ranked" if res.get("reranked") else ""))
 
 
 if __name__ == "__main__":

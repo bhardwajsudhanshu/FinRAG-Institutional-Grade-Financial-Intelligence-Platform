@@ -36,6 +36,10 @@ from finrag.config import get_settings
 class AskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
     top_k: int = Field(default=5, ge=1, le=20)
+    # Best-answer mode (STEP_026): re-rank top-10 with Flash pointwise and
+    # generate from the top-`top_k`. Slower (~30s) and bills scoring calls;
+    # default off (hybrid order, free).
+    rerank: bool = False
 
 
 class CitationOut(BaseModel):
@@ -55,6 +59,7 @@ class AskResponse(BaseModel):
     latency_ms: int
     retrieval_strategy: str
     vectordb_backend: str
+    reranked: bool = False
 
 
 class HealthResponse(BaseModel):
@@ -67,12 +72,18 @@ class HealthResponse(BaseModel):
 
 
 def create_app(bundle: dict | None = None, generator: Any | None = None,
-               chunk_id_to_text: dict | None = None) -> FastAPI:
-    """Build the app. Prebuilt args (tests) skip the lifespan index build."""
+               chunk_id_to_text: dict | None = None,
+               reranker: Any | None = None) -> FastAPI:
+    """Build the app. Prebuilt args (tests) skip the lifespan index build.
+
+    `reranker` (tests) overrides the best-answer scorer; production builds
+    a Flash pointwise reranker on first `rerank=true` request (needs GCP).
+    """
     app = FastAPI(title="FinRAG", version="0.1.0")
     app.state.bundle = bundle
     app.state.generator = generator
     app.state.chunk_id_to_text = chunk_id_to_text or {}
+    app.state.reranker = reranker
     app.state.meta = {"chunker_strategy": get_settings().chunker_strategy}
 
     @asynccontextmanager
@@ -126,8 +137,25 @@ def create_app(bundle: dict | None = None, generator: Any | None = None,
         if not question:
             raise HTTPException(status_code=422, detail="question must not be blank")
         t0 = time.perf_counter()
+        reranked = False
         try:
-            retrieved = retrieve_with_strategy(b, question, top_k=req.top_k)
+            if req.rerank:
+                from finrag.rerank import FlashPointwiseReranker
+
+                fetch_k = max(req.top_k, 10)
+                retrieved = retrieve_with_strategy(b, question, top_k=fetch_k)
+                rr = app.state.reranker
+                if rr is None:
+                    settings = get_settings()
+                    rr = FlashPointwiseReranker(
+                        project_id=settings.gcp_project_id,
+                        region=settings.gcp_region)
+                retrieved = rr.rerank(question, retrieved, req.top_k)
+                reranked = True
+            else:
+                retrieved = retrieve_with_strategy(b, question, top_k=req.top_k)
+        except HTTPException:
+            raise
         except Exception as e:
             logger.warning(f"ask retrieval failed: {e}")
             raise HTTPException(status_code=500, detail=f"retrieval failed: {e}") from e
@@ -151,6 +179,7 @@ def create_app(bundle: dict | None = None, generator: Any | None = None,
             latency_ms=int((time.perf_counter() - t0) * 1000),
             retrieval_strategy=b["strategy"],
             vectordb_backend=b.get("vectordb_backend", "in-memory"),
+            reranked=reranked,
         )
 
     @app.get("/leaderboard")
