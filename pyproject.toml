@@ -67,6 +67,7 @@ eval = [
     # official migration target (see langchain-community issue #674); we shim
     # the old import path in scripts/patch_langchain_vertexai_shim.py.
     "langchain-google-vertexai>=2.0",
+    "sentence-transformers>=6.0.1",
 ]
 # Optional vector DBs (docker-compose runs them, but Python clients are optional)
 vectordbs = [

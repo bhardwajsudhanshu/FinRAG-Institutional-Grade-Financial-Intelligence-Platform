@@ -8,6 +8,9 @@ Scorers:
 - `NoopReranker`: identity (default; all frozen rows; also the offline test double).
 - `FlashPointwiseReranker`: `gemini-2.5-flash` scores 0-10 in JSON mode.
   `score_fn` is injectable so unit tests never call Vertex.
+- `CrossEncoderReranker`: `ms-marco-MiniLM` scores locally on CPU
+  (sentence-transformers + torch, `eval` extra). One batched `predict`
+  call per rerank — ~1s for 10 pairs vs ~30s for Flash.
 """
 
 from __future__ import annotations
@@ -126,14 +129,77 @@ class FlashPointwiseReranker(BaseReranker):
 
 
 def get_reranker() -> BaseReranker:
-    """Factory from settings (`rerank_backend`: none | flash-pointwise)."""
+    """Factory from settings (`rerank_backend`: none | flash-pointwise | cross-encoder)."""
     settings = get_settings()
     if settings.rerank_backend == "none":
         return NoopReranker()
     if settings.rerank_backend == "flash-pointwise":
         return FlashPointwiseReranker(
             project_id=settings.gcp_project_id, region=settings.gcp_region)
+    if settings.rerank_backend == "cross-encoder":
+        return CrossEncoderReranker()
     raise ValueError(
         f"Unknown rerank backend: {settings.rerank_backend!r}. "
-        "Valid options: ['none', 'flash-pointwise']"
+        "Valid options: ['none', 'flash-pointwise', 'cross-encoder']"
     )
+
+
+DEFAULT_CROSS_ENCODER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+
+
+class CrossEncoderReranker(BaseReranker):
+    """Local MiniLM scorer (ADR-006 challenger, exp_031).
+
+    One batched `predict` call scores all candidates (~1s CPU for 10
+    pairs). Chunk texts are truncated to 2000 chars (MiniLM caps at 512
+    tokens; filings chunks can exceed that). `score_fn` injectable for
+    offline tests; otherwise lazy-loads the model (downloads ~90MB once
+    into `HF_HOME`, default `~/.cache` — set `HF_HOME=F:/.hf-cache` to
+    keep it on F:). A failed `predict` falls back to retrieval order
+    (returns top_k unchanged) rather than voiding the Q.
+    """
+
+    def __init__(self, model_id: str = DEFAULT_CROSS_ENCODER_MODEL,
+                 score_fn: Callable[[str, str], float | None] | None = None) -> None:
+        self._model_id = model_id
+        self._score_fn = score_fn
+        self._model = None
+        if score_fn is None:
+            try:
+                from sentence_transformers import CrossEncoder  # type: ignore
+            except ImportError as e:
+                raise RuntimeError(
+                    "CrossEncoderReranker needs the 'eval' extra: "
+                    "uv sync --extra eval"
+                ) from e
+            self._model = CrossEncoder(model_id)
+
+    @property
+    def model_id(self) -> str:
+        return f"{self._model_id}-cross-encoder-rerank"
+
+    def _batch_scores(self, question: str, texts: list[str]) -> list[float | None]:
+        if self._score_fn is not None:
+            out: list[float | None] = []
+            for t in texts:
+                try:
+                    out.append(self._score_fn(question, t))
+                except Exception as e:
+                    logger.warning(f"cross-encoder score_fn failed, chunk sinks: {e}")
+                    out.append(None)
+            return out
+        try:
+            pairs = [(question, t[:2000]) for t in texts]
+            return [float(s) for s in self._model.predict(pairs)]
+        except Exception as e:
+            logger.warning(f"cross-encoder predict failed, keeping retrieval order: {e}")
+            return [None] * len(texts)
+
+    def rerank(self, question: str, items: list[tuple[Chunk, float]],
+               top_k: int = 5) -> list[tuple[Chunk, float]]:
+        scores = self._batch_scores(question, [c.text for c, _ in items])
+        scored = [(s, ret, rank, chunk)
+                  for rank, ((chunk, ret), s) in enumerate(zip(items, scores, strict=True))]
+        scored.sort(key=lambda t: (t[0] is not None, t[0] or 0.0, t[1], -t[2]),
+                    reverse=True)
+        return [(c, r) for _, r, _, c in scored[:top_k]]

@@ -76,7 +76,8 @@ class Settings(BaseSettings):
 
     # --- Re-rank (ADR-006, Phase 5) ---
     # `rerank_backend`: "none" (identity, all frozen rows) |
-    # "flash-pointwise" (Flash scores 0-10 per candidate, exp_030).
+    # "flash-pointwise" (Flash scores 0-10 per candidate, exp_030) |
+    # "cross-encoder" (local MiniLM, one batched call, exp_031).
     rerank_backend: str = "none"
     # Candidates fetched for the reranker; top_k (5) kept after scoring.
     rerank_candidates: int = 10

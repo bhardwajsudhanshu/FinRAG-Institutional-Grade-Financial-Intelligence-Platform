@@ -17,7 +17,12 @@ if str(_ROOT) not in sys.path:
 import pytest
 
 from finrag.chunking import Chunk
-from finrag.rerank import FlashPointwiseReranker, NoopReranker, get_reranker
+from finrag.rerank import (
+    CrossEncoderReranker,
+    FlashPointwiseReranker,
+    NoopReranker,
+    get_reranker,
+)
 
 
 def _mk(cid: str, score: float = 0.5) -> tuple[Chunk, float]:
@@ -106,3 +111,37 @@ class TestFactory:
             assert isinstance(get_reranker(), NoopReranker)
         finally:
             get_settings.cache_clear()
+
+
+class TestCrossEncoder:
+    def test_orders_by_score(self) -> None:
+        scores = {"a": 0.1, "b": 0.9, "c": 0.5}
+        r = CrossEncoderReranker(score_fn=lambda q, t: scores[t.split()[-1]])
+        items = [_mk("a", 0.9), _mk("b", 0.1), _mk("c", 0.5)]
+        got = [c.chunk_id for c, _ in r.rerank("q", items, top_k=3)]
+        assert got == ["b", "c", "a"]
+
+    def test_failed_scorer_keeps_retrieval_order(self) -> None:
+        def fn(q, t):
+            raise RuntimeError("model blew up")
+        r = CrossEncoderReranker(score_fn=fn)
+        items = [_mk("a", 0.3), _mk("b", 0.7)]
+        got = [c.chunk_id for c, _ in r.rerank("q", items, top_k=2)]
+        assert got == ["b", "a"]
+
+    def test_truncates_to_top_k(self) -> None:
+        r = CrossEncoderReranker(score_fn=lambda q, t: 0.5)
+        items = [_mk(f"c{i}", 0.1 * i) for i in range(10)]
+        assert len(r.rerank("q", items, top_k=5)) == 5
+
+    def test_live_minilm_scores_sensibly(self) -> None:
+        """Real MiniLM path (downloads ~90MB once; skips offline)."""
+        pytest.importorskip("sentence_transformers")
+        try:
+            r = CrossEncoderReranker()
+        except Exception as e:
+            pytest.skip(f"MiniLM unavailable (needs one-time download): {e}")
+        items = [_mk("a"), _mk("b")]
+        got = r.rerank("What was Apple's revenue?",
+                       [(items[0][0], 0.1), (items[1][0], 0.1)], top_k=2)
+        assert len(got) == 2  # ordering across hash-texts is arbitrary; path is what's tested
