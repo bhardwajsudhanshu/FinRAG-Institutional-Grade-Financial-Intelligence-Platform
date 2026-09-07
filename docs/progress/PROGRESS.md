@@ -42,7 +42,7 @@
 | STEP_019 | 2026-09-07 | `66e48ef` exp_022 full run | exp_022 full 139-Q hybrid+Qdrant run (139/139 identical sets, metrics identical, -1.1s/Q) + batching fix | `docs/progress/STEP_019_exp022_full_run.md` | DONE |
 | STEP_020 | 2026-09-07 | `c8d8051` FastAPI serving | FastAPI serving (health/ask/leaderboard, 8 tests, make serve) + optional-embedder threading + machine-env finding | `docs/progress/STEP_020_fastapi_serving.md` | DONE |
 | STEP_021 | 2026-09-07 | `305c196` Streamlit demo | Streamlit demo on API (ask + citations + health + leaderboard, 10 tests) | `docs/progress/STEP_021_streamlit_demo.md` | DONE |
-| STEP_022 | 2026-09-07 | PENDING (commit next) | Rerank phase: ADR-006 + Flash pointwise scorer + runner wiring + exp_030 scaffold, smoke 0.833 | `docs/progress/STEP_022_rerank_flash_pointwise.md` | PENDING — ready to commit |
+| STEP_022 | 2026-09-07 | `6f0d873` ADR-006 + rerank | Rerank phase: ADR-006 + Flash pointwise scorer + runner wiring + exp_030 scaffold, smoke 0.833 | `docs/progress/STEP_022_rerank_flash_pointwise.md` | DONE |
 | STEP_023 | — | — | NEXT: exp_030 full 139-Q run (~1.5h, ~$0.15) + gap verdict + leaderboard | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
