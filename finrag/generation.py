@@ -113,6 +113,28 @@ class MockGenerator(BaseGenerator):
         )
 
 
+def _response_text(response) -> str:
+    """Extract answer text from a Vertex `GenerateContentResponse`.
+
+    `response.text` raises when the candidate holds multiple content parts
+    (seen once in exp_020 q_0053: two identical refusal parts). Fall back
+    to joining every text part across candidates so one SDK quirk never
+    voids an answer. Returns "" only when nothing textual exists.
+    """
+    try:
+        return response.text
+    except Exception:
+        logger.warning("response.text failed; joining candidate parts instead")
+    parts: list[str] = []
+    for cand in getattr(response, "candidates", None) or []:
+        content = getattr(cand, "content", None)
+        for part in getattr(content, "parts", None) or []:
+            text = getattr(part, "text", None)
+            if text:
+                parts.append(text)
+    return "\n".join(parts)
+
+
 class VertexGenerator(BaseGenerator):
     """Real Gemini generator via Vertex AI. Stub for now — wire when ready."""
 
@@ -159,7 +181,7 @@ class VertexGenerator(BaseGenerator):
                 rec["input_tokens"] = in_tok
                 rec["output_tokens"] = out_tok
         return GenerationResult(
-            answer=response.text,
+            answer=_response_text(response),
             citations=[c for _, c in contexts],
             input_tokens=in_tok,
             output_tokens=out_tok,

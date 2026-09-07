@@ -1,0 +1,36 @@
+exp_name: exp_021_hybrid_rrf
+description: Hybrid dense + BM25 with RRF (k=60, top-20 per side) over naive chunks. Must beat BM25's 0.7194 hit AND dense's 0.8058 recall together.
+
+chunker:
+  type: naive_fixed
+  size: 512
+  overlap: 50
+  tokenizer: cl100k_base
+
+embedder:
+  backend: vertex
+  model: text-embedding-005
+  dim: 768
+  note: dense side embeds chunks + question; BM25 side is free
+
+retrieval:
+  strategy: hybrid
+  dense_top_k: 20
+  bm25_top_k: 20
+  rrf_k: 60
+  final_top_k: 5
+
+generator:
+  backend: vertex
+  model: gemini-2.5-flash
+  temperature: 0.0
+
+ragas_judge:
+  llm: gemini-2.5-flash
+  embeddings: text-embedding-005
+
+eval_set:
+  path: data/eval/qa_pairs.jsonl
+  version: v1
+  n_questions: 139
+  n_filings: 20
