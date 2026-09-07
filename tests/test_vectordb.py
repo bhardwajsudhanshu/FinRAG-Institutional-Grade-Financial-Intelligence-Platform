@@ -23,7 +23,7 @@ if str(_ROOT) not in sys.path:
 import pytest
 
 from finrag.embeddings import MockEmbedder
-from finrag.vectordb import QdrantBackend, VectorDBBackend
+from finrag.vectordb import QdrantBackend, VectorDBBackend, WeaviateBackend
 
 qdrant_client = pytest.importorskip("qdrant_client")
 
@@ -148,3 +148,62 @@ class TestMathSanity:
     def test_mock_vectors_are_unit_norm(self, embedder: MockEmbedder) -> None:
         v = embedder.embed("Apple net sales were $383.3B.")
         assert abs(math.sqrt(sum(x * x for x in v)) - 1.0) < 1e-9
+
+
+# --- WeaviateBackend (live server; skipped when Docker is down) ----------------
+
+
+def _weaviate_backend_or_skip() -> WeaviateBackend:
+    pytest.importorskip("weaviate")
+    try:
+        return WeaviateBackend(collection="TestFinragBench")
+    except Exception as e:
+        pytest.skip(f"Weaviate not reachable (run `make docker-up`): {e}")
+
+
+class TestWeaviateBackend:
+    def test_implements_backend_interface(self) -> None:
+        b = _weaviate_backend_or_skip()
+        try:
+            assert isinstance(b, VectorDBBackend)
+        finally:
+            b.close()
+
+    def test_round_trip_and_top1(self, embedder: MockEmbedder,
+                                 corpus_ids: list[str],
+                                 corpus_texts: list[str]) -> None:
+        b = _weaviate_backend_or_skip()
+        try:
+            assert b.query(embedder.embed("q"), top_k=5) == []
+            b.upsert(corpus_ids, _embed_all(embedder, corpus_texts),
+                     payloads=[{"ticker": "AAPL"}, {"ticker": "AAPL"}, {"ticker": "MSFT"}])
+            assert len(b) == 3
+            hits = b.query(embedder.embed("Microsoft Azure revenue"), top_k=1)
+            assert hits[0][0] == "MSFT_item7::0000"
+            with pytest.raises(ValueError):
+                b.upsert(["x"], [])
+        finally:
+            b.close()
+
+    def test_parity_top1_and_set(self, embedder: MockEmbedder,
+                                 corpus_ids: list[str],
+                                 corpus_texts: list[str]) -> None:
+        from finrag.chunking import Chunk
+        from finrag.retrieval import InMemoryIndex
+
+        b = _weaviate_backend_or_skip()
+        try:
+            vecs = _embed_all(embedder, corpus_texts)
+            mem = InMemoryIndex()
+            for cid, t, v in zip(corpus_ids, corpus_texts, vecs, strict=True):
+                mem.add(Chunk(chunk_id=cid, text=t, metadata={}), v)
+            b.upsert(corpus_ids, vecs)
+            for q in ("Apple net sales fiscal year", "gross margin services",
+                      "Microsoft cloud growth"):
+                qv = embedder.embed(q)
+                expected = [c.chunk_id for c, _ in mem.query(qv, top_k=3)]
+                got = [cid for cid, _ in b.query(qv, top_k=3)]
+                assert got[0] == expected[0]
+                assert set(got) == set(expected)
+        finally:
+            b.close()

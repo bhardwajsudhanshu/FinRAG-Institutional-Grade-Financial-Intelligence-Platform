@@ -22,18 +22,26 @@ services:
     restart: unless-stopped
 
   weaviate:
-    image: semitechnologies/weaviate:1.25.5
+    # Pinned to 1.27.x: weaviate-client 4.23 refuses servers < 1.27.0
+    # (STEP_017: compose shipped 1.25.5, client rejected it at connect).
+    image: semitechnologies/weaviate:1.27.7
     container_name: finrag-weaviate
     ports:
       - "8080:8080"
+      # v4 clients ALSO need gRPC (STEP_017: missing mapping broke connects).
+      - "50051:50051"
     volumes:
       - weaviate_data:/var/lib/weaviate
     environment:
       QUERY_DEFAULTS_LIMIT: 25
       AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
       PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
-      ENABLE_MODULES: "text2vec-transformers"
-      DEFAULT_VECTORIZER_MODULE: "text2vec-transformers"
+      # No modules: we use bring-your-own-vectors (vectorizer: none) so no
+      # inference container is needed. (STEP_017: ENABLE_MODULES previously
+      # named text2vec-transformers with no inference endpoint configured,
+      # which crashed Weaviate at startup — fatal "modules didn't initialize".)
+      ENABLE_MODULES: ""
+      DEFAULT_VECTORIZER_MODULE: none
     restart: unless-stopped
 
   redis:

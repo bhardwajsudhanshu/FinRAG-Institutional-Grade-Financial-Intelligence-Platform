@@ -1,25 +1,31 @@
 # exp_050_qdrant — Analysis
 
-**Status:** PREVIEW COMPLETE (STEP_016). Canonical benchmark run (docker + ledger row) deferred to STEP_017.
-**Source:** `results/benchmarks/qdrant_preview.json` (untracked ephemeral, mock, `:memory:`, $0, ~2 min wall).
+**Status:** COMPLETE (STEP_017). Live docker run + `:memory:` preview.
+**Sources:** `results/benchmarks/qdrant_docker.json` (canonical, mock, live server, $0), `results/benchmarks/qdrant_preview.json` (`:memory:` preview, STEP_016). Both untracked ephemeral; this file is the record.
+**Ledger:** NO `experiments.csv` row (ADR-005: ops benchmark, RAG schema mismatch — all RAGAS columns would be empty). `vectordb` leaderboard category stays null until a locked schema rev adds latency columns (deferred, recorded).
 
-## Preview numbers (4447 chunks, 139 questions)
+## Canonical numbers — live docker (4447 chunks, 139 questions)
 
-| Metric | InMemory brute-force | Qdrant `:memory:` |
-|---|---|---|
-| p50 query | 1349.7ms | **34.75ms (~39×)** |
-| p95 query | 1633.3ms | **41.78ms (~39×)** |
-| upsert 4447 | — (in-RAM list) | 6.88s |
-| parity top-1 | — | **1.000** |
-| parity set overlap (top-5) | — | **1.000** |
+| Metric | InMemory brute-force | Qdrant `:memory:` (preview) | Qdrant docker 1.10.0 (canonical) |
+|---|---|---|---|
+| p50 query | 1436.2ms | 34.75ms | **11.74ms (~122×)** |
+| p95 query | 1952.0ms | 41.78ms | **30.46ms (~64×)** |
+| upsert 4447 | — | 6.88s | 8.97s |
+| parity top-1 | — | 1.000 | **1.000** |
+| parity set overlap | — | 1.000 | **1.000** |
+
+Note: live docker is FASTER than `:memory:` (30.46 vs 41.78ms) — server-side HNSW beats local mode; the preview was not a lower bound after all (recorded correction). Client/server skew noted: qdrant-client 1.19.0 vs server 1.10.0 warns incompatibility but all used calls work.
+
+## Gates (ADR-005): ALL PASS
+
+parity 1.0/1.0 ≥ 0.99 ✓ · p95 30.46ms < 100ms ✓ · $0 marginal (self-hosted) ✓.
 
 ## What this means
 
-1. **Parity is perfect at scale** (139/139 top-1, 1.0 set overlap) — the unit-test float32 tail flips never materialize on real text with mock vectors. Same-vectors→same-ranking holds; the benchmark can proceed to latency/ops without quality re-verification per DB (spot-check only).
-2. **p95 41.78ms clears ADR-005's 100ms bar in `:memory:`** — documented lower bound (no network/Docker). Docker run will add overhead; same harness, same script.
-3. **Why brute-force is so slow:** pure-Python cosine over 4447×768-dim per query (~1.3-1.6s). Production was never going to ship this — the benchmark's job is picking its replacement, and Qdrant HNSW is a 39× answer.
-4. Embed 4447 (mock) took 7.2s — harness overhead is trivial; the instrument is ready for docker/Weaviate runs.
+1. **Qdrant reproduces brute-force ranking exactly at 139/139** — the float32 tail flips from unit tests never appear on real text. Quality-frozen benchmarking validated: no per-DB RAGAS needed.
+2. **Production was never shipping brute-force** (~1.4-2.0s/query in Python). Qdrant docker answers in ~12-30ms.
+3. Embed 4447 (mock) 6.8s — harness overhead trivial.
 
-## Decision (preview, not final)
+## Decision
 
-Qdrant passes all three gates (parity 1.0/1.0, p95 < 100ms) pending the docker confirmation + Weaviate comparison (STEP_017+, needs Docker Desktop up — user action).
+Qdrant APPROVED as production dense store pending the Weaviate comparison (exp_051, same step): Weaviate must beat 30.46ms p95 convincingly AND clear parity gates to displace it, given Qdrant's exactness.

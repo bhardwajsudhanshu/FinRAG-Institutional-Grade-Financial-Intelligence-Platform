@@ -1,0 +1,23 @@
+exp_name: exp_051_weaviate
+description: Weaviate latency/parity benchmark, same 4447 chunks + 139 Q texts as exp_050. BYO vectors, no modules.
+
+store:
+  backend: weaviate
+  version: 1.27.7  # compose pin (client 4.23 refuses < 1.27.0)
+  collection: FinragBenchLive
+  vector_config: self_provided
+  distance: cosine
+
+vectors:
+  chunks: naive_512_50
+  embedder: mock
+
+queries:
+  n: 139
+  top_k: 5
+
+decision:
+  parity_top1_rate_min: 0.99
+  parity_set_overlap_min: 0.99
+  p95_ms_max: 100
+  displace_qdrant_needs: clearly faster p95 AND parity gates green

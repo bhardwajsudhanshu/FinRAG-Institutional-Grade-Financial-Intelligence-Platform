@@ -13,6 +13,9 @@ Usage:
     # Live docker Qdrant (needs Docker Desktop up):
     EMBEDDER_BACKEND=mock uv run python scripts/benchmark_vectordb.py --qdrant-url http://localhost:6333 --out results/benchmarks/qdrant_docker.json
 
+    # Live Weaviate (needs Docker Desktop up):
+    EMBEDDER_BACKEND=mock uv run python scripts/benchmark_vectordb.py --backend weaviate --collection FinragBenchLive --out results/benchmarks/weaviate_docker.json
+
 Output JSON: {n_chunks, upsert_s, latencies_ms per backend, parity, ...}.
 Canonical benchmark rows for experiments.csv come from full eval runs
 (STEP_017+), not from this script — this is the timing instrument.
@@ -29,12 +32,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from finrag.chunking import chunk_sections_by_strategy  # noqa: E402
-from finrag.config import get_settings  # noqa: E402
-from finrag.data.parse_sections import parse_filing  # noqa: E402
-from finrag.embeddings import get_embedder  # noqa: E402
-from finrag.retrieval import InMemoryIndex  # noqa: E402
-from finrag.vectordb import QdrantBackend  # noqa: E402
+from finrag.chunking import chunk_sections_by_strategy
+from finrag.config import get_settings
+from finrag.data.parse_sections import parse_filing
+from finrag.embeddings import get_embedder
+from finrag.retrieval import InMemoryIndex
 
 
 def _load_eval_chunks() -> tuple[list, list[dict]]:
@@ -70,6 +72,8 @@ def _percentile(data: list[float], p: float) -> float:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--backend", choices=["qdrant", "weaviate"], default="qdrant",
+                        help="Store to benchmark (default: qdrant)")
     parser.add_argument("--qdrant-url", default=":memory:",
                         help="Qdrant location (:memory: or http://host:6333)")
     parser.add_argument("--out", type=Path, default=Path("results/benchmarks/qdrant_preview.json"))
@@ -88,38 +92,50 @@ def main() -> int:
         mem.add(c, v)
 
     t0 = time.perf_counter()
-    qdb = QdrantBackend(dim=embedder.dim, collection=args.collection,
-                        location=args.qdrant_url)
-    qdb.upsert([c.chunk_id for c in chunks], vectors,
-               payloads=[{"ticker": c.metadata.get("ticker", ""),
-                          "section_id": c.metadata.get("section_id", "")} for c in chunks])
-    upsert_s = time.perf_counter() - t0
-    print(f"[bench] qdrant upsert {len(chunks)} in {upsert_s:.1f}s")
+    if args.backend == "qdrant":
+        from finrag.vectordb import QdrantBackend
 
-    mem_lat, qdb_lat, top1_agree, set_overlap = [], [], 0, []
+        store = QdrantBackend(dim=embedder.dim, collection=args.collection,
+                              location=args.qdrant_url)
+        location = args.qdrant_url
+    else:
+        from finrag.vectordb import WeaviateBackend
+
+        store = WeaviateBackend(collection=args.collection)
+        location = "localhost:8080"
+    store.upsert([c.chunk_id for c in chunks], vectors,
+                 payloads=[{"ticker": c.metadata.get("ticker", ""),
+                            "section_id": c.metadata.get("section_id", "")} for c in chunks])
+    upsert_s = time.perf_counter() - t0
+    print(f"[bench] {args.backend} upsert {len(chunks)} in {upsert_s:.1f}s")
+
+    mem_lat, store_lat, top1_agree, set_overlap = [], [], 0, []
     questions = [q["question"] for q in qa]
     qvecs = embedder.embed_batch(questions)
-    for qv in qvecs:
-        t = time.perf_counter()
-        exp_ids = [c.chunk_id for c, _ in mem.query(qv, top_k=5)]
-        mem_lat.append((time.perf_counter() - t) * 1000)
-        t = time.perf_counter()
-        got_ids = [cid for cid, _ in qdb.query(qv, top_k=5)]
-        qdb_lat.append((time.perf_counter() - t) * 1000)
-        top1_agree += int(bool(got_ids) and bool(exp_ids) and got_ids[0] == exp_ids[0])
-        set_overlap.append(len(set(got_ids) & set(exp_ids)) / max(1, len(exp_ids)))
-    qdb.close()
+    try:
+        for qv in qvecs:
+            t = time.perf_counter()
+            exp_ids = [c.chunk_id for c, _ in mem.query(qv, top_k=5)]
+            mem_lat.append((time.perf_counter() - t) * 1000)
+            t = time.perf_counter()
+            got_ids = [cid for cid, _ in store.query(qv, top_k=5)]
+            store_lat.append((time.perf_counter() - t) * 1000)
+            top1_agree += int(bool(got_ids) and bool(exp_ids) and got_ids[0] == exp_ids[0])
+            set_overlap.append(len(set(got_ids) & set(exp_ids)) / max(1, len(exp_ids)))
+    finally:
+        store.close()
 
     result = {
         "n_chunks": len(chunks),
         "n_questions": len(qa),
-        "qdrant_location": args.qdrant_url,
+        "backend": args.backend,
+        "location": location,
         "embedder": type(embedder).__name__,
         "upsert_s": round(upsert_s, 2),
         "in_memory": {"p50_ms": round(_percentile(mem_lat, 50), 2),
                       "p95_ms": round(_percentile(mem_lat, 95), 2)},
-        "qdrant": {"p50_ms": round(_percentile(qdb_lat, 50), 2),
-                   "p95_ms": round(_percentile(qdb_lat, 95), 2)},
+        "store": {"p50_ms": round(_percentile(store_lat, 50), 2),
+                  "p95_ms": round(_percentile(store_lat, 95), 2)},
         "parity_top1_rate": round(top1_agree / len(qa), 4),
         "parity_set_overlap_mean": round(statistics.fmean(set_overlap), 4),
     }
