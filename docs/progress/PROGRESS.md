@@ -28,7 +28,7 @@
 | STEP_012 | 2026-09-07 | `7c2ca42` ADR-004 + BM25/RRF | Phase 3 opens: ADR-004 + BM25/RRF paths + retrieval_strategy + 13 tests + exp_020 scaffold, smoke 0.833 | `docs/progress/STEP_012_phase3_bm25_hybrid.md` | DONE |
 | STEP_013 | 2026-09-07 | `3d926e6` exp_020 full run | exp_020 full 139-Q BM25 run (4447 chunks, content-hit leader 0.7194, recall trailer 0.7238) + leaderboard refresh | `docs/progress/STEP_013_exp020_full_run.md` | DONE |
 | STEP_014 | 2026-09-07 | `6b536d8` gen fix + hybrid scaffold | Multi-part generation fix (6 tests) + exp_021 hybrid scaffold, smoke 0.833 | `docs/progress/STEP_014_gen_fix_hybrid_scaffold.md` | DONE |
-| STEP_015 | 2026-09-07 | PENDING (commit next) | exp_021 full 139-Q hybrid run (SWEEP all 4 categories: cr 0.8843, content 0.8129) + leaderboard refresh | `docs/progress/STEP_015_exp021_full_run.md` | PENDING — ready to commit |
+| STEP_015 | 2026-09-07 | `f254df4` exp_021 full run | exp_021 full 139-Q hybrid run (SWEEP all 4 categories: cr 0.8843, content 0.8129) + leaderboard refresh | `docs/progress/STEP_015_exp021_full_run.md` | DONE |
 | STEP_016 | — | — | NEXT: vector-DB benchmark (ADR-005 first, quality frozen, measures latency/ops) | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
