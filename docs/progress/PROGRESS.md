@@ -43,7 +43,7 @@
 | STEP_020 | 2026-09-07 | `c8d8051` FastAPI serving | FastAPI serving (health/ask/leaderboard, 8 tests, make serve) + optional-embedder threading + machine-env finding | `docs/progress/STEP_020_fastapi_serving.md` | DONE |
 | STEP_021 | 2026-09-07 | `305c196` Streamlit demo | Streamlit demo on API (ask + citations + health + leaderboard, 10 tests) | `docs/progress/STEP_021_streamlit_demo.md` | DONE |
 | STEP_022 | 2026-09-07 | `6f0d873` ADR-006 + rerank | Rerank phase: ADR-006 + Flash pointwise scorer + runner wiring + exp_030 scaffold, smoke 0.833 | `docs/progress/STEP_022_rerank_flash_pointwise.md` | DONE |
-| STEP_023 | 2026-09-07 | PENDING (commit next) | exp_030 full 139-Q rerank run (gap closed: cite 0.61->0.73, 5/5 sweep, $0.171 all-in) + reranker category defined | `docs/progress/STEP_023_exp030_full_run.md` | PENDING — ready to commit |
+| STEP_023 | 2026-09-07 | `1e6d787` exp_030 full run | exp_030 full 139-Q rerank run (gap closed: cite 0.61->0.73, 5/5 sweep, $0.171 all-in) + reranker category defined | `docs/progress/STEP_023_exp030_full_run.md` | DONE |
 | STEP_024 | — | — | NEXT: exp_031 MiniLM (cheap leadership?) or API best-answer flag or nightly drift job | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
