@@ -9,6 +9,13 @@
 > 2. Every STEP links: git commit + files changed + ADR/exp + how to verify.
 > 3. `results/experiments.csv` and `results/leaderboard.json` are append-only ledgers — same rule.
 > 4. Uncommitted work is always tracked as `Status: PENDING` until committed.
+> 5. Push state is tracked below from STEP_017 onward (STEP_001–016 verified pushed).
+
+## Sync status (tracked from STEP_017 onward)
+
+- Pushed through: `2a1e847` (STEP_016 index DONE) — STEP_001–016 all on `origin/main`, verified 2026-09-07 (`git rev-list --count origin/main..HEAD` baseline).
+- Unpushed: `55416b9` + `43221ee` (both STEP_017). Push with `git push origin main`.
+- Rule: after every push, update this section (move the boundary). After every STEP commit, the new commit(s) join Unpushed until pushed.
 
 ## Index
 
