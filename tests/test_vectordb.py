@@ -82,6 +82,25 @@ class TestContract:
         with pytest.raises(ValueError):
             backend.upsert(["only-one-id"], _embed_all(embedder, corpus_texts))
 
+    def test_batched_upsert_stores_all(self, embedder: MockEmbedder) -> None:
+        # Regression test for the STEP_019 live failure: one 4447-point
+        # upsert is ~72MB > Qdrant's 32MB HTTP cap (400). Batching must be
+        # transparent: all points stored and retrievable.
+        n = 120
+        ids = [f"C::{i:04d}" for i in range(n)]
+        texts = [f"Disclosure sentence number {i} about revenue." for i in range(n)]
+        b = QdrantBackend(dim=embedder.dim, collection="test_batched")
+        try:
+            b.upsert(ids, _embed_all(embedder, texts), batch_size=7)
+            assert len(b) == n
+            # Hash-embedder ties on shared tokens are arbitrary-ordered, so
+            # assert membership (all batches landed, target retrievable),
+            # not top-1: batching transparency is what's under test.
+            got = [cid for cid, _ in b.query(embedder.embed("Disclosure sentence number 42"), top_k=5)]
+            assert "C::0042" in got
+        finally:
+            b.close()
+
 
 class TestRetrievalQuality:
     def test_exact_match_returns_right_chunk(self, backend: QdrantBackend,

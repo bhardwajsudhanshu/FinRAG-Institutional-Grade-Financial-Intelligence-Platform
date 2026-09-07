@@ -47,7 +47,9 @@ class QdrantBackend(VectorDBBackend):
         return self._count
 
     def upsert(self, chunk_ids: list[str], vectors: list[list[float]],
-               payloads: list[dict] | None = None) -> None:
+               payloads: list[dict] | None = None, batch_size: int = 500) -> None:
+        """Batch-upsert (Qdrant HTTP caps a request at 32MB — one 4447-point
+        upsert is ~72MB and 400s. 500-point batches are ~8MB each)."""
         if len(chunk_ids) != len(vectors):
             raise ValueError("chunk_ids and vectors must be parallel lists")
         models = self._models
@@ -59,7 +61,9 @@ class QdrantBackend(VectorDBBackend):
             )
             for i, (cid, vec) in enumerate(zip(chunk_ids, vectors, strict=True))
         ]
-        self._client.upsert(collection_name=self._collection, points=points)
+        for start in range(0, len(points), batch_size):
+            self._client.upsert(collection_name=self._collection,
+                                points=points[start:start + batch_size])
         self._count += len(points)
 
     def query(self, query_vector: list[float], top_k: int = 5) -> list[tuple[str, float]]:

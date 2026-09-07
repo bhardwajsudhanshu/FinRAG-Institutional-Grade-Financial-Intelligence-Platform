@@ -39,12 +39,13 @@
 | STEP_016 | 2026-09-07 | `3f59594` ADR-005 + vectordb | Vector-DB phase: ADR-005 + backend interface + Qdrant :memory: (parity 1.0, p95 41.8ms ~39×) + harness + exp_050 | `docs/progress/STEP_016_vectordb_interface_qdrant.md` | DONE |
 | STEP_017 | 2026-09-07 | `55416b9` live docker benchmarks | Live docker: Qdrant canonical (p95 30.5ms, parity 1.0, APPROVED) + Weaviate impl (p95 9.7ms but parity 0.95 FAIL) + 3 compose fixes | `docs/progress/STEP_017_live_docker_benchmarks.md` | DONE |
 | STEP_018 | 2026-09-07 | `0a32737` Qdrant in eval path | Qdrant in eval path (`vectordb_backend` + adapter + exp_022 scaffold), smoke hybrid+Qdrant 0.833, live .env fixed | `docs/progress/STEP_018_qdrant_in_runner.md` | DONE |
-| STEP_019 | — | — | NEXT: exp_022 full 139-Q run (parity vs exp_021) + leaderboard | TBD | TODO |
+| STEP_019 | 2026-09-07 | PENDING (commit next) | exp_022 full 139-Q hybrid+Qdrant run (139/139 identical sets, metrics identical, -1.1s/Q) + batching fix | `docs/progress/STEP_019_exp022_full_run.md` | PENDING — ready to commit |
+| STEP_020 | — | — | NEXT: FastAPI serving (deployable now) or rerank phase or Vertex Search pre-deploy | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
 ## Current headline numbers (frozen)
 
-From `results/experiments.csv` (6 rows, 14-col schema since STEP_008):
+From `results/experiments.csv` (7 rows, 14-col schema since STEP_008):
 
 - `exp_001_naive_baseline`: 139 Q, 20 filings, 4447 chunks, context_recall=0.8058, faithfulness=0.8847, answer_relevancy=0.7428, hit@5=0.6043, cite_acc=0.5612, latency 8731ms, $0.038 (content cols empty — frozen before fix)
 - `exp_002_recursive`: 139 Q, 20 filings, 5412 chunks, context_recall=0.7913, faithfulness=0.8595, answer_relevancy=0.7080, hit@5=0.3237 (artifact), cite_acc=0.2158 (artifact), latency 9968ms, $0.0299 (content cols empty — frozen)
@@ -52,8 +53,9 @@ From `results/experiments.csv` (6 rows, 14-col schema since STEP_008):
 - `exp_004_structural`: 139 Q, 20 filings, 4952 chunks, context_recall=0.7727, faithfulness=0.8826, answer_relevancy=0.7340, hit@5=0.3957 (artifact), cite_acc=0.2806 (artifact), **hit@5_content=0.6906 (fixed logic; non-OOS 0.645 = exp_003)**, cite_content=0.6691, latency 8908ms, $0.0327
 - `exp_020_bm25`: 139 Q, 20 filings, 4447 chunks (= exp_001, pure retrieval effect), context_recall=0.7238, faithfulness=0.8604, answer_relevancy=0.6670, hit@5=**0.6115 (best, valid)**, cite_acc=0.5396, **hit@5_content=0.7194 (best)**, cite_content=**0.7050 (best)**, latency **4374ms (fastest)**, $0.0354
 - `exp_021_hybrid_rrf`: 139 Q, 20 filings, 4447 chunks, context_recall=**0.8843 (best, +8pp)**, faithfulness=**0.9063 (best)**, answer_relevancy=**0.7496 (best)**, hit@5=**0.6763 (best)**, cite_acc=**0.6115 (best)**, **hit@5_content=0.8129 (best)**, cite_content=**0.7986 (best)**, latency 8961ms, $0.0366
+- `exp_022_hybrid_qdrant`: 139 Q, 20 filings, 4447 chunks, cr=0.8760/fa=0.8979/ar=0.7587 (RAGAS ±noise vs exp_021), customs IDENTICAL (0.6763/0.6115/0.8129/0.7986), **139/139 identical retrieved sets**, latency 7824ms (-1.1s/Q), $0.0365 — parity proof, deployable as-is
 
-Leaders (`results/leaderboard.json` @ 2026-09-07T07:13:22): **SWEEP — exp_021_hybrid_rrf leads all four decided categories** (chunking/retrieval cr=0.8843; chunking_content 0.8129; end_to_end fa=0.9063).
+Leaders (`results/leaderboard.json` @ 2026-09-07T10:05:51): **SWEEP — exp_021_hybrid_rrf leads all four decided categories** (chunking/retrieval cr=0.8843; chunking_content 0.8129; end_to_end fa=0.9063). exp_022 parity-confirms it (identical customs, RAGAS ±noise) without dethroning.
 Trustworthy cross-chunker signal: content-based same_ticker+section hit@5 = 0.734 (exp_001) vs 0.741 (exp_002) — see `docs/experiments/exp_002_recursive/analysis.md`.
 
 ## Data on disk (as of 2026-09-07)
@@ -61,7 +63,7 @@ Trustworthy cross-chunker signal: content-based same_ticker+section hit@5 = 0.73
 - `data/raw/`: ~50+ 10-K HTML files (AAPL/MSFT/GOOGL have 3-4y; BAC/GS/JPM only 1 filing each — ingest incomplete, see STEP_003).
 - `data/eval/qa_pairs.jsonl`: v1 frozen, 139 Q (67 lookup, 45 section, 9 synthesis, 18 OOS), 20 tickers.
 - `data/runtime_costs.jsonl`: per-call cost log (all Vertex calls, incl. both STEP_008 attempts).
-- `results/exp_001_naive_baseline/`, `exp_002_recursive/`, `exp_003_semantic/`, `exp_004_structural/`, `exp_020_bm25/`, `exp_021_hybrid_rrf/per_question.jsonl`: per-Q audit trail (139 rows each).
+- `results/exp_001_naive_baseline/`, `exp_002_recursive/`, `exp_003_semantic/`, `exp_004_structural/`, `exp_020_bm25/`, `exp_021_hybrid_rrf/`, `exp_022_hybrid_qdrant/per_question.jsonl`: per-Q audit trail (139 rows each).
 - `results/smoke/*` + `results/benchmarks/*` + `data/eval/*.limit*.jsonl`: ephemeral instrument outputs, snapshotted by the user in `9261360` (metric-fix smokes), `5bd0283` (STEP_007 smoke), `b03f4a7` (STEP_009 smoke + limit6 slice) — all three commits are smoke/limit only, no code. New outputs stay untracked until snapshotted (STEP_010's smoke rode along in `d292dfd` because it was user-staged).
 
 ## Roadmap position
