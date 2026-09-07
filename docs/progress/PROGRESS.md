@@ -46,7 +46,7 @@
 | STEP_023 | 2026-09-07 | `1e6d787` exp_030 full run | exp_030 full 139-Q rerank run (gap closed: cite 0.61->0.73, 5/5 sweep, $0.171 all-in) + reranker category defined | `docs/progress/STEP_023_exp030_full_run.md` | DONE |
 | STEP_024 | 2026-09-07 | `7716c59` MiniLM challenger | MiniLM cross-encoder challenger (torch CPU, 4 tests) + exp_031 scaffold, smoke 0.833 in ~half Flash time | `docs/progress/STEP_024_minilm_challenger.md` | DONE |
 | STEP_025 | 2026-09-07 | `d1d694b` exp_031 full run | exp_031 full 139-Q run (challenger LOSES: 0.770 < hybrid 0.813, MiniLM retired, phase closed) | `docs/progress/STEP_025_exp031_full_run.md` | DONE |
-| STEP_026 | 2026-09-07 | PENDING (commit next) | API best-answer mode (rerank flag + UI checkbox, 3 tests) — cheap default + flagship per request | `docs/progress/STEP_026_api_best_answer.md` | PENDING — ready to commit |
+| STEP_026 | 2026-09-07 | `ef874f8` API best-answer | API best-answer mode (rerank flag + UI checkbox, 3 tests) — cheap default + flagship per request | `docs/progress/STEP_026_api_best_answer.md` | DONE |
 | STEP_027 | — | — | NEXT: nightly drift job, Vertex Search pre-deploy, or README/deploy polish | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
