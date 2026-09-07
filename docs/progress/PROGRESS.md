@@ -38,7 +38,7 @@
 | STEP_015 | 2026-09-07 | `f254df4` exp_021 full run | exp_021 full 139-Q hybrid run (SWEEP all 4 categories: cr 0.8843, content 0.8129) + leaderboard refresh | `docs/progress/STEP_015_exp021_full_run.md` | DONE |
 | STEP_016 | 2026-09-07 | `3f59594` ADR-005 + vectordb | Vector-DB phase: ADR-005 + backend interface + Qdrant :memory: (parity 1.0, p95 41.8ms ~39×) + harness + exp_050 | `docs/progress/STEP_016_vectordb_interface_qdrant.md` | DONE |
 | STEP_017 | 2026-09-07 | `55416b9` live docker benchmarks | Live docker: Qdrant canonical (p95 30.5ms, parity 1.0, APPROVED) + Weaviate impl (p95 9.7ms but parity 0.95 FAIL) + 3 compose fixes | `docs/progress/STEP_017_live_docker_benchmarks.md` | DONE |
-| STEP_018 | 2026-09-07 | PENDING (commit next) | Qdrant in eval path (`vectordb_backend` + adapter + exp_022 scaffold), smoke hybrid+Qdrant 0.833, live .env fixed | `docs/progress/STEP_018_qdrant_in_runner.md` | PENDING — ready to commit |
+| STEP_018 | 2026-09-07 | `0a32737` Qdrant in eval path | Qdrant in eval path (`vectordb_backend` + adapter + exp_022 scaffold), smoke hybrid+Qdrant 0.833, live .env fixed | `docs/progress/STEP_018_qdrant_in_runner.md` | DONE |
 | STEP_019 | — | — | NEXT: exp_022 full 139-Q run (parity vs exp_021) + leaderboard | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
