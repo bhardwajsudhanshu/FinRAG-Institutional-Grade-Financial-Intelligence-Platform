@@ -40,7 +40,8 @@
 | STEP_017 | 2026-09-07 | `55416b9` live docker benchmarks | Live docker: Qdrant canonical (p95 30.5ms, parity 1.0, APPROVED) + Weaviate impl (p95 9.7ms but parity 0.95 FAIL) + 3 compose fixes | `docs/progress/STEP_017_live_docker_benchmarks.md` | DONE |
 | STEP_018 | 2026-09-07 | `0a32737` Qdrant in eval path | Qdrant in eval path (`vectordb_backend` + adapter + exp_022 scaffold), smoke hybrid+Qdrant 0.833, live .env fixed | `docs/progress/STEP_018_qdrant_in_runner.md` | DONE |
 | STEP_019 | 2026-09-07 | `66e48ef` exp_022 full run | exp_022 full 139-Q hybrid+Qdrant run (139/139 identical sets, metrics identical, -1.1s/Q) + batching fix | `docs/progress/STEP_019_exp022_full_run.md` | DONE |
-| STEP_020 | — | — | NEXT: FastAPI serving (deployable now) or rerank phase or Vertex Search pre-deploy | TBD | TODO |
+| STEP_020 | 2026-09-07 | PENDING (commit next) | FastAPI serving (health/ask/leaderboard, 8 tests, make serve) + optional-embedder threading + machine-env finding | `docs/progress/STEP_020_fastapi_serving.md` | PENDING — ready to commit |
+| STEP_021 | — | — | NEXT: Streamlit demo on this API, or rerank phase, or Vertex Search pre-deploy | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
 ## Current headline numbers (frozen)
@@ -71,7 +72,8 @@ Trustworthy cross-chunker signal: content-based same_ticker+section hit@5 = 0.73
 Week 1-2 Foundation: DONE (exp_001 + eval set).
 Week 3-4 Chunking: 3/5 full runs done (exp_002, exp_003, exp_004). No chunker beats naive on context_recall; semantic leads faithfulness; structural leads content-hit + efficiency. exp_005 (late/contextual) DEFERRED per exp_004 decision.
 Week 5-8 Retrieval (Phase-3 in-memory COMPLETE STEP_015): hybrid RRF sweeps all 4 categories (cr 0.8843, content 0.8129, fa 0.9063). Production retrieval path = naive chunks + hybrid RRF.
-Vector-DB benchmark (STEP_016 opened, STEP_017 decided live): **production dense store = Qdrant** (docker p95 30.5ms, parity 1.0/1.0, all gates pass). Weaviate faster (p95 9.7ms) but parity 0.95 FAILS locked gates (ef-tuning rematch possible). No ledger rows for ops benchmarks (schema mismatch, recorded). `make docker-up` verified from scratch (3 compose fixes: modules crash-loop, client/server skew 1.25.5→1.27.7, gRPC port).
+Vector-DB benchmark (STEP_016 opened, STEP_017 decided live, STEP_018-019 wired+proven): **production = naive + hybrid RRF + live Qdrant** (parity 139/139, -1.1s/Q). Weaviate faster (p95 9.7ms) but parity 0.95 FAILS locked gates (ef rematch possible). No ledger rows for ops benchmarks (schema mismatch). `make docker-up` verified from scratch (3 compose fixes: modules crash-loop, 1.25.5→1.27.7 skew, gRPC port).
+Product surface (OPENED STEP_020): FastAPI (`api/`, health/ask/leaderboard, `make serve`/`serve-qdrant`) serving the sweep winner; 109 tests green. Machine-env warning: OS exports `VECTORDB_BACKEND=chroma` (beats `.env` in pydantic-settings; user should delete it — invalid value, crashes non-overridden runs).
 Week 5-12 rest: NOT STARTED (vectordb, RAPTOR, rerank, CRAG, router, cache, API/UI).
 
 ## Tracking discipline (locked from STEP_007 onward)

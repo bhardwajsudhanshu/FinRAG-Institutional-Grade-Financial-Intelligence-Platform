@@ -3,7 +3,7 @@
 # All commands assume you're in the project root and have uv installed.
 # The venv lives in .venv/ on F: drive; uv cache at F:/.uv-cache.
 
-.PHONY: help install setup env dev test lint format ingest ingest-sample query eval ui docker-up docker-down docker-logs clean vertex-check
+.PHONY: help install setup env dev test lint format ingest ingest-sample query eval ui serve docker-up docker-down docker-logs clean vertex-check
 
 help: ## Show this help
 	@uv run python -c "import re; print('\n'.join(sorted(re.findall(r'^([a-zA-Z_-]+):.*?## (.*)', open('Makefile').read(), re.MULTILINE))))"
@@ -57,6 +57,12 @@ qa-gen-smoke: ## Generate a 2-Q smoke eval set
 
 ui: ## Launch the Streamlit dashboard
 	uv run streamlit run ui/streamlit_app.py
+
+serve: ## Serve the production API (hybrid retrieval; Vertex creds required)
+	CHUNKER_STRATEGY=naive RETRIEVAL_STRATEGY=hybrid VECTORDB_BACKEND=in-memory uv run uvicorn api.main:app --host 0.0.0.0 --port 8000
+
+serve-qdrant: ## Serve with the live Qdrant dense side (needs `make docker-up`)
+	CHUNKER_STRATEGY=naive RETRIEVAL_STRATEGY=hybrid VECTORDB_BACKEND=qdrant uv run uvicorn api.main:app --host 0.0.0.0 --port 8000
 
 # --- Docker -----------------------------------------------------------------
 docker-up: ## Start Qdrant, Weaviate, Redis, Postgres

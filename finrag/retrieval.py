@@ -91,9 +91,15 @@ def retrieve(
     index: InMemoryIndex,
     question: str,
     top_k: int = 5,
+    embedder=None,
 ) -> list[tuple[Chunk, float]]:
-    """Embed a question and return the top-k most similar chunks."""
-    embedder = get_embedder()
+    """Embed a question and return the top-k most similar chunks.
+
+    `embedder` defaults to the configured backend; tests inject the same
+    embedder the index was built with (STEP_020: the /ask path otherwise
+    mixes volumes — e.g. Vertex questions against mock index vectors).
+    """
+    embedder = embedder or get_embedder()
     q_vec = embedder.embed(question)
     return index.query(q_vec, top_k=top_k)
 
@@ -184,14 +190,20 @@ def retrieve_with_strategy(
     - bm25: lexical query only (no embedding calls at all).
     - hybrid: top-`per_side_k` from each side, RRF-fused to top_k.
     Raises ValueError on unknown strategy so misconfiguration is loud.
+
+    The question embedder is `bundle.get("embedder")` when the bundle
+    carries one (tests / serving with injected indexes), else the
+    configured backend.
     """
     strategy = bundle.get("strategy", "dense")
+    embedder = bundle.get("embedder")
     if strategy == "dense":
-        return retrieve(bundle["dense"], question, top_k=top_k)
+        return retrieve(bundle["dense"], question, top_k=top_k, embedder=embedder)
     if strategy == "bm25":
         return bundle["bm25"].query(question, top_k=top_k)
     if strategy == "hybrid":
-        dense_hits = retrieve(bundle["dense"], question, top_k=per_side_k)
+        dense_hits = retrieve(bundle["dense"], question, top_k=per_side_k,
+                              embedder=embedder)
         bm25_hits = bundle["bm25"].query(question, top_k=per_side_k)
         fused = reciprocal_rank_fusion(
             [[c.chunk_id for c, _ in dense_hits], [c.chunk_id for c, _ in bm25_hits]],
