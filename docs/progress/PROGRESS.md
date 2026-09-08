@@ -60,12 +60,13 @@
 | STEP_037 | 2026-09-08 | `a457fbf` serving hardening | Serving hardening (persistent Qdrant + attach in 2.5s + pre-warm script, live-verified) | `docs/progress/STEP_037_serving_hardening.md` | DONE |
 | STEP_038 | 2026-09-08 | `e9ff27f` README refresh | README + deploy refresh (serving profiles, 12-row table, 182 tests) | `docs/progress/STEP_038_readme_deploy_refresh.md` | DONE |
 | STEP_039 | 2026-09-08 | `49a1e03` HyDE + exp_044 | HyDE hypothetical-doc retrieval + exp_044 scaffold (composes with all strategies, smoke 6/6) | `docs/progress/STEP_039_hyde_retrieval.md` | DONE |
-| STEP_040 | — | — | NEXT: exp_044 full 139-Q run (~50 min) + verdict vs exp_001 + leaderboard | TBD | TODO |
+| STEP_040 | 2026-09-08 | PENDING (commit next) | exp_044 full 139-Q run (HyDE +8 net p~0.10, best dense-only, kept not default) | `docs/progress/STEP_040_exp044_full_run.md` | PENDING — ready to commit |
+| STEP_041 | — | — | NEXT: README refresh, serving hardening follow-ups, or hybrid+multiquery/HyDE combos | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
 ## Current headline numbers (frozen)
 
-From `results/experiments.csv` (12 rows, 14-col schema since STEP_008):
+From `results/experiments.csv` (13 rows, 14-col schema since STEP_008):
 
 - `exp_001_naive_baseline`: 139 Q, 20 filings, 4447 chunks, context_recall=0.8058, faithfulness=0.8847, answer_relevancy=0.7428, hit@5=0.6043, cite_acc=0.5612, latency 8731ms, $0.038 (content cols empty — frozen before fix)
 - `exp_002_recursive`: 139 Q, 20 filings, 5412 chunks, context_recall=0.7913, faithfulness=0.8595, answer_relevancy=0.7080, hit@5=0.3237 (artifact), cite_acc=0.2158 (artifact), latency 9968ms, $0.0299 (content cols empty — frozen)
@@ -79,6 +80,7 @@ From `results/experiments.csv` (12 rows, 14-col schema since STEP_008):
 - `exp_041_parent_doc`: 139 Q, 20 filings, 4447 parents + ~13.2K children, cr=0.7397, fa=**0.9233 (best non-rerank)**, ar=0.6989, hit@5=0.5899/cite=0.5324, content **0.6978 (+9.4pp vs naive)**, cite_content 0.6763, 10239ms/Q, $0.0375 — hierarchy real but small; hybrid leads by 11pp
 - `exp_042_hybrid_parent`: 139 Q, 20 filings, 4447 parents + ~13.2K children, cr=0.8223/fa=0.9190/ar=0.7245, hit@5=**0.6835 (best chunk_id)**/cite=**0.6187 (best chunk_id)**, content **0.8129 (EXACT tie hybrid)**/cite_content 0.7842, 10563ms/Q, $0.0366 — partial redemption (fuses cleanly), retired at 3× cost
 - `exp_043_multi_query`: 139 Q, 20 filings, 4447 chunks, cr=0.8003/fa=0.9199/ar=0.7317, hit@5=0.5755/cite=0.5252, content 0.7194 (= BM25 exactly, 82/100 overlap), cite_content 0.6978, 25153ms/Q, $0.0378 (+~$0.01 expansion) — expansion is NOISE non-OOS (+4, p~0.42), retired
+- `exp_044_hyde`: 139 Q, 20 filings, 4447 chunks, cr=0.8140/fa=0.9024/ar=0.7512, hit@5=0.5899/cite=0.5396, content **0.7482 (best dense-only)**, cite_content 0.7194 (= BM25 exactly), 20128ms/Q, $0.0377 (+139 HyDE writes) — SUGGESTIVE (+8, p~0.10), kept not default
 
 Leaders (`results/leaderboard.json` @ 2026-09-07T13:02:01): **SWEEP 5/5 — exp_030_flash_rerank leads every decided category** (cr=0.9132; content 0.8849; cite 0.7266; fa=0.9574). Only `vectordb` null (ops track, no latency columns by design).
 Trustworthy cross-chunker signal: content-based same_ticker+section hit@5 = 0.734 (exp_001) vs 0.741 (exp_002) — see `docs/experiments/exp_002_recursive/analysis.md`.
@@ -100,8 +102,8 @@ Vector-DB benchmark (STEP_016 opened, STEP_017 decided live, STEP_018-019 wired+
 Product surface (STEP_020 API + STEP_021 demo + STEP_026 best-answer + STEP_037 hardening): FastAPI + Streamlit + persistent Qdrant (pre-warm once, attach in ~2s, deterministic ids); 182 tests green (0 skips with Docker up).
 Ops (STEP_027 guard + STEP_028 polish): nightly drift guard (`make nightly-smoke` ~$0.005 + checker with noise floor + Task Scheduler entry + runbook) — live DRIFT-OK; README leads with the sweep; deploy guide with 3 measured profiles. Machine-env warning: OS exports `VECTORDB_BACKEND=chroma` (beats `.env` in pydantic-settings; user should delete it — invalid value, crashes non-overridden runs; full-run commands must pin all four vars).
 Rerank phase (STEP_022 opened, STEP_023 won, STEP_025 closed): Flash pointwise closes the gap (cite 0.61->0.73, recall 0.88->0.91 too) — 5/5 sweep, all-in $0.171/run. MiniLM challenger LOSES (0.770 < hybrid 0.813 — ms-marco ≠ 10-K language, retired). Rerank ON for leadership, OFF by default for cost.
-Retrieval leftovers (STEP_030 opened, STEP_031 measured): parent-doc hierarchy (256-children → 512-parents == exp_001) scores content 0.698 (+9.4pp over direct dense, best non-rerank faithfulness 0.9233) but trails hybrid by 11pp at 3× index cost — useful, not leading; hybrid+parent-doc combo filed; STEP_032 built it (smoke 6/6), full run decided: tie at 3x cost, hierarchy retired (STEP_032-033). Question-side multi-query flag live, exp_043 isolates it vs exp_001 (STEP_034) — measured STEP_035: noise (+4, p~0.42), retired. McNemar paired reasoning adopted as standard. Only HyDE + hybrid+multiquery remain filed, low priority.
-Week 5-12 rest: NOT STARTED (vectordb, RAPTOR, rerank, CRAG, router, cache, API/UI).
+Retrieval leftovers (STEP_030 opened, STEP_031 measured): parent-doc hierarchy (256-children → 512-parents == exp_001) scores content 0.698 (+9.4pp over direct dense, best non-rerank faithfulness 0.9233) but trails hybrid by 11pp at 3× index cost — useful, not leading; hybrid+parent-doc combo filed; STEP_032 built it (smoke 6/6), full run decided: tie at 3x cost, hierarchy retired (STEP_032-033). Question-side multi-query flag live, exp_043 isolates it vs exp_001 (STEP_034) — measured STEP_035: noise (+4, p~0.42), retired. McNemar paired reasoning adopted as standard. HyDE measured STEP_040: +8 p~0.10 SUGGESTIVE, kept not default (best dense-only 0.748). Only hybrid+HyDE/multiquery combos remain filed, low priority.
+Week 5-12 rest: NOT STARTED (RAPTOR, CRAG, auto-router, semantic cache, Vertex Search was measured once and rejected; vectordb/rerank/API/UI/ops all DONE).
 
 ## Tracking discipline (locked from STEP_007 onward)
 
