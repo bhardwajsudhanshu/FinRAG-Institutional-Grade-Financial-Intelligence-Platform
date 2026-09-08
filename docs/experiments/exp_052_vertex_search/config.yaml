@@ -1,0 +1,25 @@
+exp_name: exp_052_vertex_search
+description: Managed Vector Search latency/parity benchmark, same 4447 chunks + 139 Q texts. Deploy-bench-teardown same session.
+
+store:
+  backend: vertex-vector-search
+  index: tree-AH, dim 768, DOT_PRODUCT_DISTANCE
+  leaf_node_embedding_count: 500
+  leaf_nodes_to_search_percent: 10
+  shard_size: SHARD_SIZE_SMALL
+  update_method: STREAM_UPDATE
+  endpoint_machine_type: e2-standard-2
+  replicas: 1
+
+vectors:
+  chunks: naive_512_50
+  embedder: mock
+
+queries:
+  n: 139
+  top_k: 5
+
+decision:
+  parity_top1_rate_min: 0.99
+  parity_set_overlap_min: 0.99
+  p95_ms_max: 100

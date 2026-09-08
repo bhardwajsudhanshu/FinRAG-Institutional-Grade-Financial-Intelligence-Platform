@@ -49,7 +49,8 @@
 | STEP_026 | 2026-09-07 | `ef874f8` API best-answer | API best-answer mode (rerank flag + UI checkbox, 3 tests) — cheap default + flagship per request | `docs/progress/STEP_026_api_best_answer.md` | DONE |
 | STEP_027 | 2026-09-07 | `108f8bf` drift guard | Nightly drift guard (checker + scheduler entry + runbook, 17 tests, live DRIFT-OK) | `docs/progress/STEP_027_nightly_drift_guard.md` | DONE |
 | STEP_028 | 2026-09-07 | `08d2b10` deploy polish | Deploy polish (README sweep table + deploy guide + setup fix) | `docs/progress/STEP_028_deploy_polish.md` | DONE |
-| STEP_029 | — | — | NEXT: Vertex Search pre-deploy, parent-doc retrieval, or serving hardening | TBD | TODO |
+| STEP_029 | 2026-09-08 | PENDING (commit next) | Vertex Search benchmark (p95 412ms FAIL, Qdrant stands, phase closed, GCP empty) | `docs/progress/STEP_029_vertex_search_benchmark.md` | PENDING — ready to commit |
+| STEP_030 | — | — | NEXT: parent-doc retrieval, serving hardening, or README refresh (note: STEP_030 ≠ exp_030_flash_rerank — step numbers and experiment numbers are independent sequences) | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
 ## Current headline numbers (frozen)
@@ -82,7 +83,7 @@ Trustworthy cross-chunker signal: content-based same_ticker+section hit@5 = 0.73
 Week 1-2 Foundation: DONE (exp_001 + eval set).
 Week 3-4 Chunking: 3/5 full runs done (exp_002, exp_003, exp_004). No chunker beats naive on context_recall; semantic leads faithfulness; structural leads content-hit + efficiency. exp_005 (late/contextual) DEFERRED per exp_004 decision.
 Week 5-8 Retrieval (Phase-3 in-memory COMPLETE STEP_015): hybrid RRF sweeps all 4 categories (cr 0.8843, content 0.8129, fa 0.9063). Production retrieval path = naive chunks + hybrid RRF.
-Vector-DB benchmark (STEP_016 opened, STEP_017 decided live, STEP_018-019 wired+proven): **production = naive + hybrid RRF + live Qdrant** (parity 139/139, -1.1s/Q). Weaviate faster (p95 9.7ms) but parity 0.95 FAILS locked gates (ef rematch possible). No ledger rows for ops benchmarks (schema mismatch). `make docker-up` verified from scratch (3 compose fixes: modules crash-loop, 1.25.5→1.27.7 skew, gRPC port).
+Vector-DB benchmark (STEP_016 opened, STEP_017 decided live, STEP_018-019 wired+proven, STEP_029 closed with managed): **production = Qdrant, phase COMPLETE** (docker p95 30.5ms parity 1.0; Weaviate 9.7ms but parity 0.95 FAIL; Vertex Search 412ms FAIL + billed — all three measured, GCP verified empty; hybrid+Qdrant 139/139 end-to-end parity; no ledger rows for ops benchmarks by rule).
 Product surface (STEP_020 API + STEP_021 demo + STEP_026 best-answer): FastAPI (health/ask/leaderboard, cheap default + `rerank=true` flagship) + Streamlit (checkbox); 143 tests green (3 Weaviate skips when Docker down — by design).
 Ops (STEP_027 guard + STEP_028 polish): nightly drift guard (`make nightly-smoke` ~$0.005 + checker with noise floor + Task Scheduler entry + runbook) — live DRIFT-OK; README leads with the sweep; deploy guide with 3 measured profiles. Machine-env warning: OS exports `VECTORDB_BACKEND=chroma` (beats `.env` in pydantic-settings; user should delete it — invalid value, crashes non-overridden runs; full-run commands must pin all four vars).
 Rerank phase (STEP_022 opened, STEP_023 won, STEP_025 closed): Flash pointwise closes the gap (cite 0.61->0.73, recall 0.88->0.91 too) — 5/5 sweep, all-in $0.171/run. MiniLM challenger LOSES (0.770 < hybrid 0.813 — ms-marco ≠ 10-K language, retired). Rerank ON for leadership, OFF by default for cost.
