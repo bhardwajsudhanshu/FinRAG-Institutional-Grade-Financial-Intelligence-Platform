@@ -53,12 +53,13 @@
 | STEP_030 | 2026-09-08 | `c40077d` parent-doc + exp_041 | Parent-doc retrieval + exp_041 scaffold (parents == exp_001, smoke 6/6 first ever; STEP_030 ≠ exp_030) | `docs/progress/STEP_030_parent_doc_retrieval.md` | DONE |
 | STEP_031 | 2026-09-08 | `b68dc58` exp_041 full run | exp_041 full 139-Q run (content 0.698 +9.4pp, faithfulness best non-rerank, hybrid still leads; STEP_031 ≠ exp_031) | `docs/progress/STEP_031_exp041_full_run.md` | DONE |
 | STEP_032 | 2026-09-08 | `1d1dd08` hybrid-parent combo | Hybrid+parent combo + exp_042 scaffold (fuse children, parents generate, smoke 6/6) | `docs/progress/STEP_032_hybrid_parent_combo.md` | DONE |
-| STEP_033 | — | — | NEXT: exp_042 full 139-Q run (~60 min) + both-bars verdict + leaderboard | TBD | TODO |
+| STEP_033 | 2026-09-08 | PENDING (commit next) | exp_042 full 139-Q run (exact tie 0.8129 with hybrid, hierarchy retires) | `docs/progress/STEP_033_exp042_full_run.md` | PENDING — ready to commit |
+| STEP_034 | — | — | NEXT: multi-query/HyDE, serving hardening, or README refresh | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
 ## Current headline numbers (frozen)
 
-From `results/experiments.csv` (10 rows, 14-col schema since STEP_008):
+From `results/experiments.csv` (11 rows, 14-col schema since STEP_008):
 
 - `exp_001_naive_baseline`: 139 Q, 20 filings, 4447 chunks, context_recall=0.8058, faithfulness=0.8847, answer_relevancy=0.7428, hit@5=0.6043, cite_acc=0.5612, latency 8731ms, $0.038 (content cols empty — frozen before fix)
 - `exp_002_recursive`: 139 Q, 20 filings, 5412 chunks, context_recall=0.7913, faithfulness=0.8595, answer_relevancy=0.7080, hit@5=0.3237 (artifact), cite_acc=0.2158 (artifact), latency 9968ms, $0.0299 (content cols empty — frozen)
@@ -70,6 +71,7 @@ From `results/experiments.csv` (10 rows, 14-col schema since STEP_008):
 - `exp_030_flash_rerank`: 139 Q, 20 filings, 4447 chunks, cr=**0.9132**, fa=**0.9574**, ar=**0.7864**, hit@5=**0.7770** (+10.1pp), cite=**0.7266** (+11.5pp), content **0.8849** (+7.2pp), cite_content **0.8561**, 41966ms/Q, row $0.038 / **all-in $0.1714** — gap closed (RANKING), 5/5 sweep
 - `exp_031_minilm_rerank`: 139 Q, 20 filings, 4447 chunks, cr=0.8430/fa=0.8887/ar=0.7027, hit@5=0.6259/cite=0.5683, content **0.7698 (< hybrid — hurts)**, cite_content 0.7554, 9442ms/Q (4.4× Flash), $0 scoring — challenger LOSES, retired (ms-marco ≠ 10-K language)
 - `exp_041_parent_doc`: 139 Q, 20 filings, 4447 parents + ~13.2K children, cr=0.7397, fa=**0.9233 (best non-rerank)**, ar=0.6989, hit@5=0.5899/cite=0.5324, content **0.6978 (+9.4pp vs naive)**, cite_content 0.6763, 10239ms/Q, $0.0375 — hierarchy real but small; hybrid leads by 11pp
+- `exp_042_hybrid_parent`: 139 Q, 20 filings, 4447 parents + ~13.2K children, cr=0.8223/fa=0.9190/ar=0.7245, hit@5=**0.6835 (best chunk_id)**/cite=**0.6187 (best chunk_id)**, content **0.8129 (EXACT tie hybrid)**/cite_content 0.7842, 10563ms/Q, $0.0366 — partial redemption (fuses cleanly), retired at 3× cost
 
 Leaders (`results/leaderboard.json` @ 2026-09-07T13:02:01): **SWEEP 5/5 — exp_030_flash_rerank leads every decided category** (cr=0.9132; content 0.8849; cite 0.7266; fa=0.9574). Only `vectordb` null (ops track, no latency columns by design).
 Trustworthy cross-chunker signal: content-based same_ticker+section hit@5 = 0.734 (exp_001) vs 0.741 (exp_002) — see `docs/experiments/exp_002_recursive/analysis.md`.
@@ -91,7 +93,7 @@ Vector-DB benchmark (STEP_016 opened, STEP_017 decided live, STEP_018-019 wired+
 Product surface (STEP_020 API + STEP_021 demo + STEP_026 best-answer): FastAPI (health/ask/leaderboard, cheap default + `rerank=true` flagship) + Streamlit (checkbox); 143 tests green (3 Weaviate skips when Docker down — by design).
 Ops (STEP_027 guard + STEP_028 polish): nightly drift guard (`make nightly-smoke` ~$0.005 + checker with noise floor + Task Scheduler entry + runbook) — live DRIFT-OK; README leads with the sweep; deploy guide with 3 measured profiles. Machine-env warning: OS exports `VECTORDB_BACKEND=chroma` (beats `.env` in pydantic-settings; user should delete it — invalid value, crashes non-overridden runs; full-run commands must pin all four vars).
 Rerank phase (STEP_022 opened, STEP_023 won, STEP_025 closed): Flash pointwise closes the gap (cite 0.61->0.73, recall 0.88->0.91 too) — 5/5 sweep, all-in $0.171/run. MiniLM challenger LOSES (0.770 < hybrid 0.813 — ms-marco ≠ 10-K language, retired). Rerank ON for leadership, OFF by default for cost.
-Retrieval leftovers (STEP_030 opened, STEP_031 measured): parent-doc hierarchy (256-children → 512-parents == exp_001) scores content 0.698 (+9.4pp over direct dense, best non-rerank faithfulness 0.9233) but trails hybrid by 11pp at 3× index cost — useful, not leading; hybrid+parent-doc combo filed; STEP_032 built it (smoke 6/6), full run decides redemption.
+Retrieval leftovers (STEP_030 opened, STEP_031 measured): parent-doc hierarchy (256-children → 512-parents == exp_001) scores content 0.698 (+9.4pp over direct dense, best non-rerank faithfulness 0.9233) but trails hybrid by 11pp at 3× index cost — useful, not leading; hybrid+parent-doc combo filed; STEP_032 built it (smoke 6/6), full run decided: tie at 3x cost, hierarchy retired (STEP_032-033).
 Week 5-12 rest: NOT STARTED (vectordb, RAPTOR, rerank, CRAG, router, cache, API/UI).
 
 ## Tracking discipline (locked from STEP_007 onward)
