@@ -53,7 +53,7 @@
 | STEP_030 | 2026-09-08 | `c40077d` parent-doc + exp_041 | Parent-doc retrieval + exp_041 scaffold (parents == exp_001, smoke 6/6 first ever; STEP_030 ≠ exp_030) | `docs/progress/STEP_030_parent_doc_retrieval.md` | DONE |
 | STEP_031 | 2026-09-08 | `b68dc58` exp_041 full run | exp_041 full 139-Q run (content 0.698 +9.4pp, faithfulness best non-rerank, hybrid still leads; STEP_031 ≠ exp_031) | `docs/progress/STEP_031_exp041_full_run.md` | DONE |
 | STEP_032 | 2026-09-08 | `1d1dd08` hybrid-parent combo | Hybrid+parent combo + exp_042 scaffold (fuse children, parents generate, smoke 6/6) | `docs/progress/STEP_032_hybrid_parent_combo.md` | DONE |
-| STEP_033 | 2026-09-08 | PENDING (commit next) | exp_042 full 139-Q run (exact tie 0.8129 with hybrid, hierarchy retires) | `docs/progress/STEP_033_exp042_full_run.md` | PENDING — ready to commit |
+| STEP_033 | 2026-09-08 | `51dc6ac` exp_042 full run | exp_042 full 139-Q run (exact tie 0.8129 with hybrid, hierarchy retires) | `docs/progress/STEP_033_exp042_full_run.md` | DONE |
 | STEP_034 | — | — | NEXT: multi-query/HyDE, serving hardening, or README refresh | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
