@@ -50,7 +50,7 @@
 | STEP_027 | 2026-09-07 | `108f8bf` drift guard | Nightly drift guard (checker + scheduler entry + runbook, 17 tests, live DRIFT-OK) | `docs/progress/STEP_027_nightly_drift_guard.md` | DONE |
 | STEP_028 | 2026-09-07 | `08d2b10` deploy polish | Deploy polish (README sweep table + deploy guide + setup fix) | `docs/progress/STEP_028_deploy_polish.md` | DONE |
 | STEP_029 | 2026-09-08 | `7a2b447` Vertex Search bench | Vertex Search benchmark (p95 412ms FAIL, Qdrant stands, phase closed, GCP empty) | `docs/progress/STEP_029_vertex_search_benchmark.md` | DONE |
-| STEP_030 | 2026-09-08 | PENDING (commit next) | Parent-doc retrieval + exp_041 scaffold (parents == exp_001, smoke 6/6 first ever; STEP_030 ≠ exp_030) | `docs/progress/STEP_030_parent_doc_retrieval.md` | PENDING — ready to commit |
+| STEP_030 | 2026-09-08 | `c40077d` parent-doc + exp_041 | Parent-doc retrieval + exp_041 scaffold (parents == exp_001, smoke 6/6 first ever; STEP_030 ≠ exp_030) | `docs/progress/STEP_030_parent_doc_retrieval.md` | DONE |
 | STEP_031 | — | — | NEXT: exp_041 full 139-Q run (~60 min) + split verdict + leaderboard | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
