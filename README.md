@@ -72,9 +72,15 @@ make query Q="What are Apple's main risk factors?"
 make serve            # API at localhost:8000 (hybrid over in-memory)
 make serve-qdrant     # same, dense side on live Qdrant (needs docker-up)
 make ui               # dashboard at localhost:8501 (needs make serve running)
+# Best-answer mode: POST {"rerank": true} (or the UI checkbox) — Flash re-ranked flagship
+
+# 4b. Persistent serving (skip the ~5-min re-embed on every boot)
+CHUNKER_STRATEGY=naive VECTORDB_BACKEND=qdrant uv run python scripts/build_serve_index.py  # once
+CHUNKER_STRATEGY=naive RETRIEVAL_STRATEGY=hybrid VECTORDB_BACKEND=qdrant QDRANT_RECREATE=false make serve-qdrant
+# ^ attaches to the pre-warmed collection in ~2s instead of re-embedding
 
 # 5. Verify + guard
-uv run pytest tests -q          # 175 tests, $0
+uv run pytest tests -q          # 182 tests, $0
 make nightly-smoke              # 10-Q hybrid guard + drift check vs exp_021 (~$0.005)
 ```
 
@@ -102,10 +108,10 @@ docs/
 ├── 00_overview.md 01_setup.md 02_nightly_ops.md 03_deploy.md
 ├── decisions/           # ADR-001…006 — the why, before the code
 ├── experiments/         # exp_001…043 — hypothesis, frozen config, results, analysis
-└── progress/            # STEP_001…035 — bit-by-bit build log (start here to recall anything)
+└── progress/            # STEP_001…037 — bit-by-bit build log (start here to recall anything)
 results/                 # experiments.csv (append-only) + leaderboard + snapshots + per-Q JSONL
-scripts/                 # check_drift.py, nightly.ps1, benchmark_vectordb.py, benchmark_vertex_search.py, vertex auth
-tests/                   # 175 unit tests (offline) + eval harness
+scripts/                 # check_drift.py, nightly.ps1, build_serve_index.py, benchmark_vectordb.py, benchmark_vertex_search.py, vertex auth
+tests/                   # 182 unit tests (offline) + eval harness
 ```
 
 ## Roadmap status (honest)
@@ -117,9 +123,9 @@ tests/                   # 175 unit tests (offline) + eval harness
 | Retrieval (BM25 → hybrid RRF → parent-doc → hybrid-parent → multi-query) | DONE — hybrid sweeps; hierarchy helps (+9.4pp) but ties at 3× cost (retired); expansion is noise (retired) |
 | Vector DBs (Qdrant ✓, Weaviate measured, Vertex Search measured) | DONE for serving — Qdrant stands |
 | Re-rank (Flash wins, MiniLM retired) | DONE |
-| Product (FastAPI + best-answer mode + Streamlit) | DONE |
+| Product (FastAPI + best-answer mode + Streamlit + persistent Qdrant) | DONE — pre-warm once, attach in ~2s |
 | Ops (nightly drift guard + deploy guide) | DONE |
-| Open | HyDE / hybrid+multiquery combo (low priority), serving hardening, nightly cron activation, auto-router/semantic cache |
+| Open | HyDE / hybrid+multiquery combo (low priority), multi-worker fleet, nightly cron activation, auto-router/semantic cache |
 
 ## Why these choices?
 
@@ -130,7 +136,7 @@ tests/                   # 175 unit tests (offline) + eval harness
 - [ADR-005: Vector-DB benchmark](docs/decisions/adr_005_vectordb_benchmark.md)
 - [ADR-006: Re-rank direction](docs/decisions/adr_006_rerank_direction.md)
 
-New here? Read [`docs/progress/PROGRESS.md`](docs/progress/PROGRESS.md) — the chronological index of all 35 build steps.
+New here? Read [`docs/progress/PROGRESS.md`](docs/progress/PROGRESS.md) — the chronological index of all 37 build steps.
 
 ---
 
