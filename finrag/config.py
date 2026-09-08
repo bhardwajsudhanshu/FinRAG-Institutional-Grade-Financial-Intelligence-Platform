@@ -89,6 +89,12 @@ class Settings(BaseSettings):
     # Candidates fetched for the reranker; top_k (5) kept after scoring.
     rerank_candidates: int = 10
 
+    # --- Multi-query expansion (STEP_034, exp_043) ---
+    # Orthogonal flag (works over any retrieval strategy): paraphrase the
+    # question N times with Flash, retrieve per formulation, RRF-fuse.
+    multiquery_enabled: bool = False
+    multiquery_paraphrases: int = 3
+
     # --- Logging / cost tracking ---
     cost_log_path: Path = Path("./data/runtime_costs.jsonl")
     log_level: str = "INFO"

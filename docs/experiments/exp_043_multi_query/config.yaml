@@ -1,0 +1,38 @@
+exp_name: exp_043_multi_query
+description: Flash paraphrases (3) + original, retrieved independently over dense, RRF-fused. One variable vs exp_001 (expansion on/off).
+
+chunker:
+  type: naive_fixed
+  size: 512
+  overlap: 50
+  tokenizer: cl100k_base
+
+embedder:
+  backend: vertex
+  model: text-embedding-005
+  dim: 768
+
+retrieval:
+  strategy: dense
+  top_k: 5
+
+multiquery:
+  enabled: true
+  paraphrases: 3
+  model: gemini-2.5-flash
+  fusion: RRF k=60 over 4 rankings
+
+generator:
+  backend: vertex
+  model: gemini-2.5-flash
+  temperature: 0.0
+
+ragas_judge:
+  llm: gemini-2.5-flash
+  embeddings: text-embedding-005
+
+eval_set:
+  path: data/eval/qa_pairs.jsonl
+  version: v1
+  n_questions: 139
+  n_filings: 20

@@ -54,7 +54,8 @@
 | STEP_031 | 2026-09-08 | `b68dc58` exp_041 full run | exp_041 full 139-Q run (content 0.698 +9.4pp, faithfulness best non-rerank, hybrid still leads; STEP_031 ≠ exp_031) | `docs/progress/STEP_031_exp041_full_run.md` | DONE |
 | STEP_032 | 2026-09-08 | `1d1dd08` hybrid-parent combo | Hybrid+parent combo + exp_042 scaffold (fuse children, parents generate, smoke 6/6) | `docs/progress/STEP_032_hybrid_parent_combo.md` | DONE |
 | STEP_033 | 2026-09-08 | `51dc6ac` exp_042 full run | exp_042 full 139-Q run (exact tie 0.8129 with hybrid, hierarchy retires) | `docs/progress/STEP_033_exp042_full_run.md` | DONE |
-| STEP_034 | — | — | NEXT: multi-query/HyDE, serving hardening, or README refresh | TBD | TODO |
+| STEP_034 | 2026-09-08 | PENDING (commit next) | Multi-query expansion flag + exp_043 scaffold (orthogonal over any strategy, smoke 6/6) | `docs/progress/STEP_034_multi_query_expansion.md` | PENDING — ready to commit |
+| STEP_035 | — | — | NEXT: exp_043 full 139-Q run (~55 min) + concentration verdict + leaderboard | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
 ## Current headline numbers (frozen)
@@ -90,7 +91,7 @@ Week 1-2 Foundation: DONE (exp_001 + eval set).
 Week 3-4 Chunking: 3/5 full runs done (exp_002, exp_003, exp_004). No chunker beats naive on context_recall; semantic leads faithfulness; structural leads content-hit + efficiency. exp_005 (late/contextual) DEFERRED per exp_004 decision.
 Week 5-8 Retrieval (Phase-3 in-memory COMPLETE STEP_015): hybrid RRF sweeps all 4 categories (cr 0.8843, content 0.8129, fa 0.9063). Production retrieval path = naive chunks + hybrid RRF.
 Vector-DB benchmark (STEP_016 opened, STEP_017 decided live, STEP_018-019 wired+proven, STEP_029 closed with managed): **production = Qdrant, phase COMPLETE** (docker p95 30.5ms parity 1.0; Weaviate 9.7ms but parity 0.95 FAIL; Vertex Search 412ms FAIL + billed — all three measured, GCP verified empty; hybrid+Qdrant 139/139 end-to-end parity; no ledger rows for ops benchmarks by rule).
-Product surface (STEP_020 API + STEP_021 demo + STEP_026 best-answer): FastAPI (health/ask/leaderboard, cheap default + `rerank=true` flagship) + Streamlit (checkbox); 143 tests green (3 Weaviate skips when Docker down — by design).
+Product surface (STEP_020 API + STEP_021 demo + STEP_026 best-answer): FastAPI (health/ask/leaderboard, cheap default + `rerank=true` flagship) + Streamlit (checkbox); 175 tests green (3 Weaviate skips when Docker down — by design).
 Ops (STEP_027 guard + STEP_028 polish): nightly drift guard (`make nightly-smoke` ~$0.005 + checker with noise floor + Task Scheduler entry + runbook) — live DRIFT-OK; README leads with the sweep; deploy guide with 3 measured profiles. Machine-env warning: OS exports `VECTORDB_BACKEND=chroma` (beats `.env` in pydantic-settings; user should delete it — invalid value, crashes non-overridden runs; full-run commands must pin all four vars).
 Rerank phase (STEP_022 opened, STEP_023 won, STEP_025 closed): Flash pointwise closes the gap (cite 0.61->0.73, recall 0.88->0.91 too) — 5/5 sweep, all-in $0.171/run. MiniLM challenger LOSES (0.770 < hybrid 0.813 — ms-marco ≠ 10-K language, retired). Rerank ON for leadership, OFF by default for cost.
 Retrieval leftovers (STEP_030 opened, STEP_031 measured): parent-doc hierarchy (256-children → 512-parents == exp_001) scores content 0.698 (+9.4pp over direct dense, best non-rerank faithfulness 0.9233) but trails hybrid by 11pp at 3× index cost — useful, not leading; hybrid+parent-doc combo filed; STEP_032 built it (smoke 6/6), full run decided: tie at 3x cost, hierarchy retired (STEP_032-033).
