@@ -57,7 +57,7 @@
 | STEP_034 | 2026-09-08 | `6149c47` multiquery flag | Multi-query expansion flag + exp_043 scaffold (orthogonal over any strategy, smoke 6/6) | `docs/progress/STEP_034_multi_query_expansion.md` | DONE |
 | STEP_035 | 2026-09-08 | `6ff782d` exp_043 full run | exp_043 full 139-Q run (expansion is noise: +4 net, p~0.42, retired) | `docs/progress/STEP_035_exp043_full_run.md` | DONE |
 | STEP_036 | 2026-09-08 | `7be64bc` README refresh | README refresh (12-row table, 175 tests, closed phases) | `docs/progress/STEP_036_readme_refresh.md` | DONE |
-| STEP_037 | 2026-09-08 | PENDING (commit next) | Serving hardening (persistent Qdrant + attach in 2.5s + pre-warm script, live-verified) | `docs/progress/STEP_037_serving_hardening.md` | PENDING — ready to commit |
+| STEP_037 | 2026-09-08 | `a457fbf` serving hardening | Serving hardening (persistent Qdrant + attach in 2.5s + pre-warm script, live-verified) | `docs/progress/STEP_037_serving_hardening.md` | DONE |
 | STEP_038 | — | — | NEXT: README refresh (serving profiles), hybrid+multiquery combo, or HyDE | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
