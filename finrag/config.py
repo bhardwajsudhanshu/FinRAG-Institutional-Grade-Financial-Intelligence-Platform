@@ -99,6 +99,13 @@ class Settings(BaseSettings):
     # question N times with Flash, retrieve per formulation, RRF-fuse.
     multiquery_enabled: bool = False
     multiquery_paraphrases: int = 3
+    hyde_enabled: bool = False
+
+    # --- HyDE hypothetical-doc retrieval (STEP_039, exp_044) ---
+    # Orthogonal flag like multiquery: write a hypothetical answer passage
+    # with Flash, retrieve with it as a second query, RRF-fuse with the
+    # original ranking. Composes with multiquery (expansion first, then
+    # HyDE per formulation — expensive; single HyDE run is the default).
 
     # --- Logging / cost tracking ---
     cost_log_path: Path = Path("./data/runtime_costs.jsonl")

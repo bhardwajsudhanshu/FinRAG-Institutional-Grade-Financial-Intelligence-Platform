@@ -363,6 +363,13 @@ def run_experiment(
 
         expander = QueryExpander(project_id=settings.gcp_project_id,
                                  region=settings.gcp_region)
+    # HyDE hypothetical docs (STEP_039): same once-per-run construction.
+    hyde_gen = None
+    if settings.hyde_enabled:
+        from finrag.hyde import HyDEGenerator
+
+        hyde_gen = HyDEGenerator(project_id=settings.gcp_project_id,
+                                 region=settings.gcp_region)
     embed_seconds = time.perf_counter() - t0
     logger.info(
         f"Index built in {embed_seconds:.1f}s "
@@ -412,6 +419,12 @@ def run_experiment(
                                                  paraphrases=paras)
             else:
                 retrieved = retrieve_with_strategy(bundle, question, top_k=fetch_k)
+            if hyde_gen is not None:
+                from finrag.hyde import hyde_fuse
+
+                retrieved = hyde_fuse(bundle, question, top_k=fetch_k,
+                                      hyde_text=hyde_gen.write(question),
+                                      base_hits=retrieved)
             retrieved = reranker.rerank(question, retrieved, top_k)
         except Exception as e:
             logger.warning(f"[{qid}] retrieval failed: {e}")
@@ -515,6 +528,7 @@ def run_experiment(
             "vectordb_backend": bundle["vectordb_backend"],
             "reranker": settings.rerank_backend,
             "multiquery": bool(settings.multiquery_enabled),
+            "hyde": bool(settings.hyde_enabled),
         }
         if per_q_out_full:
             per_q_record["retrieved_chunk_texts"] = [c.text for c, _ in retrieved]

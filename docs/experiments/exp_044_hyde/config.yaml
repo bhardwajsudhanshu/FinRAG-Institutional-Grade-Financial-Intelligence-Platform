@@ -1,0 +1,38 @@
+exp_name: exp_044_hyde
+description: HyDE hypothetical-doc fusion over dense (one variable vs exp_001). Flash 10-K excerpt as second query, RRF-anchored.
+
+chunker:
+  type: naive_fixed
+  size: 512
+  overlap: 50
+  tokenizer: cl100k_base
+
+embedder:
+  backend: vertex
+  model: text-embedding-005
+  dim: 768
+
+retrieval:
+  strategy: dense
+  top_k: 5
+
+hyde:
+  enabled: true
+  model: gemini-2.5-flash
+  passage: 3-6 sentences, 10-K register
+  fusion: RRF k=60 over 2 rankings
+
+generator:
+  backend: vertex
+  model: gemini-2.5-flash
+  temperature: 0.0
+
+ragas_judge:
+  llm: gemini-2.5-flash
+  embeddings: text-embedding-005
+
+eval_set:
+  path: data/eval/qa_pairs.jsonl
+  version: v1
+  n_questions: 139
+  n_filings: 20
