@@ -59,7 +59,7 @@
 | STEP_036 | 2026-09-08 | `7be64bc` README refresh | README refresh (12-row table, 175 tests, closed phases) | `docs/progress/STEP_036_readme_refresh.md` | DONE |
 | STEP_037 | 2026-09-08 | `a457fbf` serving hardening | Serving hardening (persistent Qdrant + attach in 2.5s + pre-warm script, live-verified) | `docs/progress/STEP_037_serving_hardening.md` | DONE |
 | STEP_038 | 2026-09-08 | `e9ff27f` README refresh | README + deploy refresh (serving profiles, 12-row table, 182 tests) | `docs/progress/STEP_038_readme_deploy_refresh.md` | DONE |
-| STEP_039 | 2026-09-08 | PENDING (commit next) | HyDE hypothetical-doc retrieval + exp_044 scaffold (composes with all strategies, smoke 6/6) | `docs/progress/STEP_039_hyde_retrieval.md` | PENDING — ready to commit |
+| STEP_039 | 2026-09-08 | `49a1e03` HyDE + exp_044 | HyDE hypothetical-doc retrieval + exp_044 scaffold (composes with all strategies, smoke 6/6) | `docs/progress/STEP_039_hyde_retrieval.md` | DONE |
 | STEP_040 | — | — | NEXT: exp_044 full 139-Q run (~50 min) + verdict vs exp_001 + leaderboard | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
