@@ -54,7 +54,7 @@
 | STEP_031 | 2026-09-08 | `b68dc58` exp_041 full run | exp_041 full 139-Q run (content 0.698 +9.4pp, faithfulness best non-rerank, hybrid still leads; STEP_031 ≠ exp_031) | `docs/progress/STEP_031_exp041_full_run.md` | DONE |
 | STEP_032 | 2026-09-08 | `1d1dd08` hybrid-parent combo | Hybrid+parent combo + exp_042 scaffold (fuse children, parents generate, smoke 6/6) | `docs/progress/STEP_032_hybrid_parent_combo.md` | DONE |
 | STEP_033 | 2026-09-08 | `51dc6ac` exp_042 full run | exp_042 full 139-Q run (exact tie 0.8129 with hybrid, hierarchy retires) | `docs/progress/STEP_033_exp042_full_run.md` | DONE |
-| STEP_034 | 2026-09-08 | PENDING (commit next) | Multi-query expansion flag + exp_043 scaffold (orthogonal over any strategy, smoke 6/6) | `docs/progress/STEP_034_multi_query_expansion.md` | PENDING — ready to commit |
+| STEP_034 | 2026-09-08 | `6149c47` multiquery flag | Multi-query expansion flag + exp_043 scaffold (orthogonal over any strategy, smoke 6/6) | `docs/progress/STEP_034_multi_query_expansion.md` | DONE |
 | STEP_035 | — | — | NEXT: exp_043 full 139-Q run (~55 min) + concentration verdict + leaderboard | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
