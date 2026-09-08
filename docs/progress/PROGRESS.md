@@ -50,7 +50,8 @@
 | STEP_027 | 2026-09-07 | `108f8bf` drift guard | Nightly drift guard (checker + scheduler entry + runbook, 17 tests, live DRIFT-OK) | `docs/progress/STEP_027_nightly_drift_guard.md` | DONE |
 | STEP_028 | 2026-09-07 | `08d2b10` deploy polish | Deploy polish (README sweep table + deploy guide + setup fix) | `docs/progress/STEP_028_deploy_polish.md` | DONE |
 | STEP_029 | 2026-09-08 | `7a2b447` Vertex Search bench | Vertex Search benchmark (p95 412ms FAIL, Qdrant stands, phase closed, GCP empty) | `docs/progress/STEP_029_vertex_search_benchmark.md` | DONE |
-| STEP_030 | — | — | NEXT: parent-doc retrieval, serving hardening, or README refresh (note: STEP_030 ≠ exp_030_flash_rerank — step numbers and experiment numbers are independent sequences) | TBD | TODO |
+| STEP_030 | 2026-09-08 | PENDING (commit next) | Parent-doc retrieval + exp_041 scaffold (parents == exp_001, smoke 6/6 first ever; STEP_030 ≠ exp_030) | `docs/progress/STEP_030_parent_doc_retrieval.md` | PENDING — ready to commit |
+| STEP_031 | — | — | NEXT: exp_041 full 139-Q run (~60 min) + split verdict + leaderboard | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
 ## Current headline numbers (frozen)
@@ -87,6 +88,7 @@ Vector-DB benchmark (STEP_016 opened, STEP_017 decided live, STEP_018-019 wired+
 Product surface (STEP_020 API + STEP_021 demo + STEP_026 best-answer): FastAPI (health/ask/leaderboard, cheap default + `rerank=true` flagship) + Streamlit (checkbox); 143 tests green (3 Weaviate skips when Docker down — by design).
 Ops (STEP_027 guard + STEP_028 polish): nightly drift guard (`make nightly-smoke` ~$0.005 + checker with noise floor + Task Scheduler entry + runbook) — live DRIFT-OK; README leads with the sweep; deploy guide with 3 measured profiles. Machine-env warning: OS exports `VECTORDB_BACKEND=chroma` (beats `.env` in pydantic-settings; user should delete it — invalid value, crashes non-overridden runs; full-run commands must pin all four vars).
 Rerank phase (STEP_022 opened, STEP_023 won, STEP_025 closed): Flash pointwise closes the gap (cite 0.61->0.73, recall 0.88->0.91 too) — 5/5 sweep, all-in $0.171/run. MiniLM challenger LOSES (0.770 < hybrid 0.813 — ms-marco ≠ 10-K language, retired). Rerank ON for leadership, OFF by default for cost.
+Retrieval leftovers (OPENED STEP_030): parent-doc hierarchy (256-children → 512-parents == exp_001, exp_041) — smoke 6/6 first ever incl. q_0005; full run decides.
 Week 5-12 rest: NOT STARTED (vectordb, RAPTOR, rerank, CRAG, router, cache, API/UI).
 
 ## Tracking discipline (locked from STEP_007 onward)

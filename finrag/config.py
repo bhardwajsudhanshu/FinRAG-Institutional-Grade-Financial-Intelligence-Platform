@@ -68,11 +68,16 @@ class Settings(BaseSettings):
     # --- Retrieval ---
     retrieval_top_k: int = 5
     # `retrieval_strategy` picks the retrieval path (ADR-004, Phase 3).
-    #   - "dense"  : cosine over Vertex/Mock embeddings (exp_001-004 path)
-    #   - "bm25"   : lexical BM25 only, embeds nothing (exp_020)
-    #   - "hybrid" : dense + BM25 fused with RRF k=60 (exp_021)
+    #   - "dense"      : cosine over Vertex/Mock embeddings (exp_001-004 path)
+    #   - "bm25"       : lexical BM25 only, embeds nothing (exp_020)
+    #   - "hybrid"     : dense + BM25 fused with RRF k=60 (exp_021)
+    #   - "parent-doc" : small-child cosine -> parent contexts (STEP_030, exp_041)
     retrieval_strategy: str = "dense"
     embedding_dim: int = 768
+    # Parent-doc child windows (STEP_030). Parents are always naive 512/50
+    # (settings chunk_size_tokens/chunk_overlap_tokens) for comparability.
+    parentdoc_child_size: int = 256
+    parentdoc_child_overlap: int = 25
 
     # --- Re-rank (ADR-006, Phase 5) ---
     # `rerank_backend`: "none" (identity, all frozen rows) |

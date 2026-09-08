@@ -189,6 +189,10 @@ def retrieve_with_strategy(
     - dense: embed question, cosine over dense index (exp_001-004 path, unchanged).
     - bm25: lexical query only (no embedding calls at all).
     - hybrid: top-`per_side_k` from each side, RRF-fused to top_k.
+    - parent-doc: top-`per_side_k` CHILDREN by cosine, mapped to unique
+      parents in first-seen order (best child score kept), truncated to
+      top_k parents. `bundle["dense"]` holds the child index,
+      `bundle["chunks_by_id"]` the parent map (STEP_030, exp_041).
     Raises ValueError on unknown strategy so misconfiguration is loud.
 
     The question embedder is `bundle.get("embedder")` when the bundle
@@ -201,6 +205,17 @@ def retrieve_with_strategy(
         return retrieve(bundle["dense"], question, top_k=top_k, embedder=embedder)
     if strategy == "bm25":
         return bundle["bm25"].query(question, top_k=top_k)
+    if strategy == "parent-doc":
+        child_hits = retrieve(bundle["dense"], question, top_k=per_side_k,
+                              embedder=embedder)
+        seen: dict[str, float] = {}
+        for child, score in child_hits:
+            pid = child.metadata.get("parent_id", "")
+            if pid and pid not in seen:
+                seen[pid] = score
+        by_id = bundle["chunks_by_id"]
+        return [(by_id[pid], score) for pid, score in list(seen.items())[:top_k]
+                if pid in by_id]
     if strategy == "hybrid":
         dense_hits = retrieve(bundle["dense"], question, top_k=per_side_k,
                               embedder=embedder)
@@ -212,5 +227,6 @@ def retrieve_with_strategy(
         by_id = bundle["chunks_by_id"]
         return [(by_id[cid], score) for cid, score in fused[:top_k] if cid in by_id]
     raise ValueError(
-        f"Unknown retrieval strategy {strategy!r}. Valid options: ['dense', 'bm25', 'hybrid']"
+        f"Unknown retrieval strategy {strategy!r}. "
+        "Valid options: ['dense', 'bm25', 'hybrid', 'parent-doc']"
     )

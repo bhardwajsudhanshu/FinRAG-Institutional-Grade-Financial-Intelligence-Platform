@@ -1,0 +1,33 @@
+exp_name: exp_041_parent_doc
+description: Parent-document retrieval (256/25 children -> 512/50 parents, dense). Same parents as exp_001 — isolates hierarchy.
+
+chunker:
+  parents: naive_512_50  # == exp_001 chunks, pinned (chunker_strategy ignored)
+  children: naive_256_25
+
+embedder:
+  backend: vertex
+  model: text-embedding-005
+  dim: 768
+  note: children indexed (~2x units vs parents); questions embedded once
+
+retrieval:
+  strategy: parent-doc
+  child_top_k: 20
+  final_top_k_parents: 5
+  parent_score: best_child_score
+
+generator:
+  backend: vertex
+  model: gemini-2.5-flash
+  temperature: 0.0
+
+ragas_judge:
+  llm: gemini-2.5-flash
+  embeddings: text-embedding-005
+
+eval_set:
+  path: data/eval/qa_pairs.jsonl
+  version: v1
+  n_questions: 139
+  n_filings: 20

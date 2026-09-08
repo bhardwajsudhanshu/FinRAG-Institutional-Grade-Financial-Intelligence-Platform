@@ -124,15 +124,25 @@ def build_index_for_qa_pairs(
     """Build the retrieval bundle for the filings referenced by the Q&A set.
 
     Returns (bundle, qa_df, chunk_id_to_text). `bundle` is a dict with
-    `strategy` ("dense" | "bm25" | "hybrid", default from settings),
-    the built index(es) under `dense` / `bm25` (None when unused),
-    `chunks_by_id` for hybrid fusion lookup, and `n_chunks`.
+    `strategy` ("dense" | "bm25" | "hybrid" | "parent-doc", default from
+    settings), the built index(es) under `dense` / `bm25` (None when
+    unused), `chunks_by_id` for fusion/parent lookup, and `n_chunks`.
     Only the needed index(es) are built: pure-BM25 runs embed nothing.
+    For "parent-doc", `dense` holds the CHILD index and `chunks_by_id`
+    maps PARENT ids (generation contexts are parents); `n_chunks` counts
+    parents (comparable to exp_001) and `n_child_chunks` the retrieval units.
     The chunk_id_to_text map is used to compute hit@5 cheaply.
     """
     settings = get_settings()
     processed_dir = processed_dir or settings.data_processed_dir
     qa_df = _qa_pairs_to_dataframe(qa_path)
+    if strategy is None:
+        strategy = settings.retrieval_strategy
+    if strategy not in ("dense", "bm25", "hybrid", "parent-doc"):
+        raise ValueError(
+            f"Unknown retrieval strategy {strategy!r}. "
+            "Valid options: ['dense', 'bm25', 'hybrid', 'parent-doc']"
+        )
 
     # Find which filings we need: the most recent (ticker, filing_date) pair
     # for each Q. For each unique filing, parse + chunk + embed.
@@ -155,6 +165,7 @@ def build_index_for_qa_pairs(
 
     # Build chunks for each filing
     all_chunks = []
+    all_children: list = []
     for key in eval_keys:
         if key not in key_to_path:
             logger.warning(f"Q references missing filing {key}, skipping")
@@ -169,6 +180,31 @@ def build_index_for_qa_pairs(
         sections = parse_filing(html)
         if not sections:
             logger.warning(f"No sections parsed for {key}, skipping")
+            continue
+        if strategy == "parent-doc":
+            # Parents are naive by design (exp_001-identical); the chunker
+            # setting is ignored here — loud, not silent.
+            if settings.chunker_strategy != "naive":
+                logger.warning(
+                    f"[{key}] parent-doc pins naive parents; ignoring "
+                    f"chunker_strategy={settings.chunker_strategy!r}")
+            from finrag.parentdoc import build_parent_child_chunks
+
+            parents, children, _ = build_parent_child_chunks(
+                sections=sections,
+                ticker=ticker,
+                filing_date=filing_date,
+                fiscal_year=fy,
+                accession_number=accession,
+                child_size=settings.parentdoc_child_size,
+                child_overlap=settings.parentdoc_child_overlap,
+            )
+            all_chunks.extend(parents)
+            all_children.extend(children)
+            logger.info(
+                f"  [{key}] parsed {len(sections)} sections, {len(parents)} "
+                f"parents, {len(children)} children (parent-doc)"
+            )
             continue
         chunks = chunk_sections_by_strategy(
             settings.chunker_strategy,
@@ -190,16 +226,21 @@ def build_index_for_qa_pairs(
 
     # Build only the index(es) the strategy needs (ADR-004). Pure-BM25
     # builds no embeddings: fast and free at retrieval time.
-    if strategy is None:
-        strategy = settings.retrieval_strategy
-    if strategy not in ("dense", "bm25", "hybrid"):
-        raise ValueError(
-            f"Unknown retrieval strategy {strategy!r}. "
-            "Valid options: ['dense', 'bm25', 'hybrid']"
-        )
     chunks_by_id = {c.chunk_id: c for c in all_chunks}
     dense_index = None
-    if strategy in ("dense", "hybrid"):
+    n_child_chunks = 0
+    if strategy == "parent-doc":
+        # Embed CHILDREN; the dense slot holds the child index.
+        from finrag.embeddings import get_embedder
+        from finrag.retrieval import InMemoryIndex
+
+        child_vectors = get_embedder().embed_batch([c.text for c in all_children])
+        child_index = InMemoryIndex()
+        for child, vec in zip(all_children, child_vectors, strict=True):
+            child_index.add(child, vec)
+        dense_index = child_index
+        n_child_chunks = len(all_children)
+    elif strategy in ("dense", "hybrid"):
         dense_index = _build_dense_index(all_chunks, chunks_by_id, settings)
     bm25_index = build_bm25_index(all_chunks) if strategy in ("bm25", "hybrid") else None
     bundle: dict[str, Any] = {
@@ -208,6 +249,7 @@ def build_index_for_qa_pairs(
         "bm25": bm25_index,
         "chunks_by_id": chunks_by_id,
         "n_chunks": len(all_chunks),
+        "n_child_chunks": n_child_chunks,
         "vectordb_backend": settings.vectordb_backend,
     }
     chunk_id_to_text = {c.chunk_id: c.text for c in all_chunks}
