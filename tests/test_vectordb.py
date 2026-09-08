@@ -271,3 +271,87 @@ class TestWeaviateBackend:
                 assert set(got) == set(expected)
         finally:
             b.close()
+
+
+class TestPersistence:
+    """STEP_037: recreate flag + server-count semantics (:memory:, offline)."""
+
+    def test_recreate_false_creates_when_missing(self, embedder: MockEmbedder,
+                                                 corpus_ids: list[str],
+                                                 corpus_texts: list[str]) -> None:
+        b = QdrantBackend(dim=embedder.dim, collection="test_persist_new",
+                          recreate=False)
+        try:
+            assert len(b) == 0
+            b.upsert(corpus_ids, _embed_all(embedder, corpus_texts))
+            assert len(b) == 3
+        finally:
+            b.close()
+
+    def test_second_instance_attaches(self, embedder: MockEmbedder,
+                                      corpus_ids: list[str],
+                                      corpus_texts: list[str]) -> None:
+        # :memory: clients are process-local, so attach-across-processes is
+        # simulated by two handles on one client is impossible — instead this
+        # pins the contract attach relies on: recreate=False never wipes,
+        # and re-upserting the same corpus is idempotent (same ids).
+        b = QdrantBackend(dim=embedder.dim, collection="test_persist_attach",
+                          recreate=False)
+        try:
+            vecs = _embed_all(embedder, corpus_texts)
+            b.upsert(corpus_ids, vecs)
+            assert len(b) == 3
+            b.upsert(corpus_ids, vecs)
+            assert len(b) == 3
+            hits = b.query(embedder.embed("Microsoft Azure revenue"), top_k=1)
+            assert hits[0][0] == "MSFT_item7::0000"
+        finally:
+            b.close()
+
+    def test_recreate_true_wipes(self, embedder: MockEmbedder,
+                                 corpus_ids: list[str],
+                                 corpus_texts: list[str]) -> None:
+        b = QdrantBackend(dim=embedder.dim, collection="test_persist_wipe")
+        try:
+            b.upsert(corpus_ids, _embed_all(embedder, corpus_texts))
+            assert len(b) == 3
+        finally:
+            b.close()
+        b2 = QdrantBackend(dim=embedder.dim, collection="test_persist_wipe",
+                           recreate=True)
+        try:
+            assert len(b2) == 0
+        finally:
+            b2.close()
+
+
+def _live_qdrant_or_skip(dim: int) -> QdrantBackend:
+    try:
+        b = QdrantBackend(dim=dim, collection="test_live_attach",
+                          location="http://localhost:6333")
+        b.point_count()
+        return b
+    except Exception as e:
+        pytest.skip(f"live Qdrant not reachable (run `make docker-up`): {e}")
+
+
+class TestLiveAttach:
+    """True cross-instance attach (needs `make docker-up`; skips offline)."""
+
+    def test_attach_sees_prior_upsert(self, embedder: MockEmbedder,
+                                      corpus_ids: list[str],
+                                      corpus_texts: list[str]) -> None:
+        b1 = _live_qdrant_or_skip(embedder.dim)
+        try:
+            b1.upsert(corpus_ids, _embed_all(embedder, corpus_texts))
+            assert len(b1) == 3
+            b2 = QdrantBackend(dim=embedder.dim, collection="test_live_attach",
+                               location="http://localhost:6333", recreate=False)
+            try:
+                assert len(b2) == 3
+                hits = b2.query(embedder.embed("Microsoft Azure revenue"), top_k=1)
+                assert hits[0][0] == "MSFT_item7::0000"
+            finally:
+                b2.close()
+        finally:
+            b1.close()

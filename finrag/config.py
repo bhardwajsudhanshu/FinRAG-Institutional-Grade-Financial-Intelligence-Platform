@@ -63,6 +63,11 @@ class Settings(BaseSettings):
     #   - "qdrant"   : live Qdrant at `qdrant_url` (parity-proven, STEP_017)
     vectordb_backend: str = "in-memory"
     qdrant_url: str = "http://localhost:6333"
+    # Serving hardening (STEP_037): evals recreate the collection every run
+    # (deterministic); serving sets QDRANT_RECREATE=false to attach to a
+    # pre-warmed collection instead of re-embedding 4447 chunks per boot.
+    qdrant_collection: str = "finrag_eval"
+    qdrant_recreate: bool = True
     chroma_persist_dir: Path = Path("./data/chroma")
 
     # --- Retrieval ---

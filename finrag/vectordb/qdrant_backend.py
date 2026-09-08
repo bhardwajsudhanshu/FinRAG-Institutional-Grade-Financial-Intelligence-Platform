@@ -19,10 +19,18 @@ from finrag.vectordb.base import VectorDBBackend
 
 
 class QdrantBackend(VectorDBBackend):
-    """Qdrant-backed vector store over caller-supplied normalized vectors."""
+    """Qdrant-backed vector store over caller-supplied normalized vectors.
+
+    - `recreate=True` (default): wipe + create the collection (deterministic
+      evals; every run starts empty).
+    - `recreate=False`: create-if-missing, keep existing points (serving:
+      pre-warm once, attach on every boot).
+    Point ids are deterministic md5(chunk_id) uint64s, so re-upserts are
+    idempotent in any order. `__len__` always reads the server count.
+    """
 
     def __init__(self, dim: int, collection: str = "finrag",
-                 location: str = ":memory:") -> None:
+                 location: str = ":memory:", recreate: bool = True) -> None:
         try:
             from qdrant_client import QdrantClient  # type: ignore
             from qdrant_client.http import models  # type: ignore
@@ -35,27 +43,43 @@ class QdrantBackend(VectorDBBackend):
         self._collection = collection
         self._dim = dim
         self._client = QdrantClient(location=location)
-        if self._client.collection_exists(collection):
-            self._client.delete_collection(collection)
-        self._client.create_collection(
-            collection_name=collection,
-            vectors_config=models.VectorParams(size=dim, distance=models.Distance.COSINE),
-        )
-        self._count = 0
+        if recreate or not self._client.collection_exists(collection):
+            if self._client.collection_exists(collection):
+                self._client.delete_collection(collection)
+            self._client.create_collection(
+                collection_name=collection,
+                vectors_config=models.VectorParams(size=dim, distance=models.Distance.COSINE),
+            )
 
     def __len__(self) -> int:
-        return self._count
+        return self.point_count()
+
+    def point_count(self) -> int:
+        """Live server-side point count (0 if the collection is missing)."""
+        try:
+            info = self._client.get_collection(self._collection)
+        except Exception:
+            return 0
+        return int(info.points_count or 0)
 
     def upsert(self, chunk_ids: list[str], vectors: list[list[float]],
                payloads: list[dict] | None = None, batch_size: int = 500) -> None:
         """Batch-upsert (Qdrant HTTP caps a request at 32MB — one 4447-point
-        upsert is ~72MB and 400s. 500-point batches are ~8MB each)."""
+        upsert is ~72MB and 400s. 500-point batches are ~8MB each).
+
+        Point ids are deterministic md5(chunk_id) uint64s (Qdrant takes
+        ints/UUIDs, not strings), so re-upserting the same corpus in ANY
+        order overwrites identical points — idempotent across processes,
+        which is what makes attach-after-restart safe.
+        """
         if len(chunk_ids) != len(vectors):
             raise ValueError("chunk_ids and vectors must be parallel lists")
+        import hashlib
+
         models = self._models
         points = [
             models.PointStruct(
-                id=i + self._count,
+                id=int(hashlib.md5(cid.encode("utf-8")).hexdigest()[:16], 16),
                 vector=list(vec),
                 payload={"chunk_id": cid, **(payloads[i] if payloads else {})},
             )
@@ -64,10 +88,9 @@ class QdrantBackend(VectorDBBackend):
         for start in range(0, len(points), batch_size):
             self._client.upsert(collection_name=self._collection,
                                 points=points[start:start + batch_size])
-        self._count += len(points)
 
     def query(self, query_vector: list[float], top_k: int = 5) -> list[tuple[str, float]]:
-        if self._count == 0 or top_k <= 0:
+        if self.point_count() == 0 or top_k <= 0:
             return []
         res = self._client.query_points(
             collection_name=self._collection,

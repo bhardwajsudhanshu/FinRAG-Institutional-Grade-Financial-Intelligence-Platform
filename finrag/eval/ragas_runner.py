@@ -268,19 +268,31 @@ def _build_dense_index(all_chunks: list, chunks_by_id: dict, settings) -> Any:
     - "qdrant": embed once, upsert to live Qdrant, return a
       `QdrantDenseIndex` adapter with the identical `.query` interface,
       so the rest of the pipeline can't tell the difference (parity 1.0,
-      STEP_017). Collection "finrag_eval" is recreated per run — nightly
-      runs are serial, so no cross-run clash.
+      STEP_017).
+    Collection handling (STEP_037): recreated per run by default
+    (`qdrant_recreate=True` — deterministic evals, serial-nightly safe).
+    With `qdrant_recreate=False` (serving), a populated collection is
+    ATTACHED without re-embedding (fast restarts); an empty/missing one
+    builds normally.
     """
     if settings.vectordb_backend == "in-memory":
         return build_index(all_chunks)
     if settings.vectordb_backend == "qdrant":
-        from finrag.embeddings import get_embedder
         from finrag.vectordb import QdrantBackend, QdrantDenseIndex
+
+        qb = QdrantBackend(dim=settings.embedding_dim,
+                           collection=settings.qdrant_collection,
+                           location=settings.qdrant_url,
+                           recreate=settings.qdrant_recreate)
+        if not settings.qdrant_recreate and len(qb) >= len(all_chunks):
+            logger.info(
+                f"Attached to Qdrant collection {settings.qdrant_collection!r} "
+                f"({len(qb)} points, no re-embed)")
+            return QdrantDenseIndex(qb, chunks_by_id)
+        from finrag.embeddings import get_embedder
 
         embedder = get_embedder()
         vectors = embedder.embed_batch([c.text for c in all_chunks])
-        qb = QdrantBackend(dim=embedder.dim, collection="finrag_eval",
-                           location=settings.qdrant_url)
         qb.upsert(
             [c.chunk_id for c in all_chunks],
             vectors,
