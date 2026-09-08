@@ -124,9 +124,9 @@ def build_index_for_qa_pairs(
     """Build the retrieval bundle for the filings referenced by the Q&A set.
 
     Returns (bundle, qa_df, chunk_id_to_text). `bundle` is a dict with
-    `strategy` ("dense" | "bm25" | "hybrid" | "parent-doc", default from
-    settings), the built index(es) under `dense` / `bm25` (None when
-    unused), `chunks_by_id` for fusion/parent lookup, and `n_chunks`.
+    `strategy` ("dense" | "bm25" | "hybrid" | "parent-doc" | "hybrid-parent",
+    default from settings), the built index(es) under `dense` / `bm25`
+    (None when unused), `chunks_by_id` for fusion/parent lookup, and `n_chunks`.
     Only the needed index(es) are built: pure-BM25 runs embed nothing.
     For "parent-doc", `dense` holds the CHILD index and `chunks_by_id`
     maps PARENT ids (generation contexts are parents); `n_chunks` counts
@@ -138,10 +138,10 @@ def build_index_for_qa_pairs(
     qa_df = _qa_pairs_to_dataframe(qa_path)
     if strategy is None:
         strategy = settings.retrieval_strategy
-    if strategy not in ("dense", "bm25", "hybrid", "parent-doc"):
+    if strategy not in ("dense", "bm25", "hybrid", "parent-doc", "hybrid-parent"):
         raise ValueError(
             f"Unknown retrieval strategy {strategy!r}. "
-            "Valid options: ['dense', 'bm25', 'hybrid', 'parent-doc']"
+            "Valid options: ['dense', 'bm25', 'hybrid', 'parent-doc', 'hybrid-parent']"
         )
 
     # Find which filings we need: the most recent (ticker, filing_date) pair
@@ -181,12 +181,12 @@ def build_index_for_qa_pairs(
         if not sections:
             logger.warning(f"No sections parsed for {key}, skipping")
             continue
-        if strategy == "parent-doc":
+        if strategy in ("parent-doc", "hybrid-parent"):
             # Parents are naive by design (exp_001-identical); the chunker
             # setting is ignored here — loud, not silent.
             if settings.chunker_strategy != "naive":
                 logger.warning(
-                    f"[{key}] parent-doc pins naive parents; ignoring "
+                    f"[{key}] {strategy} pins naive parents; ignoring "
                     f"chunker_strategy={settings.chunker_strategy!r}")
             from finrag.parentdoc import build_parent_child_chunks
 
@@ -203,7 +203,7 @@ def build_index_for_qa_pairs(
             all_children.extend(children)
             logger.info(
                 f"  [{key}] parsed {len(sections)} sections, {len(parents)} "
-                f"parents, {len(children)} children (parent-doc)"
+                f"parents, {len(children)} children ({strategy})"
             )
             continue
         chunks = chunk_sections_by_strategy(
@@ -227,9 +227,10 @@ def build_index_for_qa_pairs(
     # Build only the index(es) the strategy needs (ADR-004). Pure-BM25
     # builds no embeddings: fast and free at retrieval time.
     chunks_by_id = {c.chunk_id: c for c in all_chunks}
+    children_by_id = {c.chunk_id: c for c in all_children}
     dense_index = None
     n_child_chunks = 0
-    if strategy == "parent-doc":
+    if strategy in ("parent-doc", "hybrid-parent"):
         # Embed CHILDREN; the dense slot holds the child index.
         from finrag.embeddings import get_embedder
         from finrag.retrieval import InMemoryIndex
@@ -242,12 +243,16 @@ def build_index_for_qa_pairs(
         n_child_chunks = len(all_children)
     elif strategy in ("dense", "hybrid"):
         dense_index = _build_dense_index(all_chunks, chunks_by_id, settings)
-    bm25_index = build_bm25_index(all_chunks) if strategy in ("bm25", "hybrid") else None
+    if strategy == "hybrid-parent":
+        bm25_index = build_bm25_index(all_children)
+    else:
+        bm25_index = build_bm25_index(all_chunks) if strategy in ("bm25", "hybrid") else None
     bundle: dict[str, Any] = {
         "strategy": strategy,
         "dense": dense_index,
         "bm25": bm25_index,
         "chunks_by_id": chunks_by_id,
+        "children_by_id": children_by_id,
         "n_chunks": len(all_chunks),
         "n_child_chunks": n_child_chunks,
         "vectordb_backend": settings.vectordb_backend,

@@ -1,0 +1,36 @@
+exp_name: exp_042_hybrid_parent
+description: Hybrid RRF fused in child space, mapped to naive parents. Single variable vs exp_041 (+BM25 side) and vs exp_021 (children instead of parents).
+
+chunker:
+  parents: naive_512_50
+  children: naive_256_25
+
+embedder:
+  backend: vertex
+  model: text-embedding-005
+  dim: 768
+  note: children indexed (~3x units); questions embedded once
+
+retrieval:
+  strategy: hybrid-parent
+  dense_top_k: 20
+  bm25_top_k: 20
+  rrf_k: 60
+  fusion_space: children
+  final_top_k_parents: 5
+  parent_score: best_fused_child_score
+
+generator:
+  backend: vertex
+  model: gemini-2.5-flash
+  temperature: 0.0
+
+ragas_judge:
+  llm: gemini-2.5-flash
+  embeddings: text-embedding-005
+
+eval_set:
+  path: data/eval/qa_pairs.jsonl
+  version: v1
+  n_questions: 139
+  n_filings: 20

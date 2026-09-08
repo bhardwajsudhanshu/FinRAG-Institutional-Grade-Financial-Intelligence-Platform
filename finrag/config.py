@@ -72,6 +72,8 @@ class Settings(BaseSettings):
     #   - "bm25"       : lexical BM25 only, embeds nothing (exp_020)
     #   - "hybrid"     : dense + BM25 fused with RRF k=60 (exp_021)
     #   - "parent-doc" : small-child cosine -> parent contexts (STEP_030, exp_041)
+    #   - "hybrid-parent": dense + BM25 fused in CHILD space, then mapped to
+    #     parents (STEP_032, exp_042)
     retrieval_strategy: str = "dense"
     embedding_dim: int = 768
     # Parent-doc child windows (STEP_030). Parents are always naive 512/50

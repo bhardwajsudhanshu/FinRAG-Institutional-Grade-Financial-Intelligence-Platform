@@ -112,3 +112,42 @@ class TestDispatch:
         bundle, retrieve_with_strategy = self._bundle()
         hits = retrieve_with_strategy(bundle, "Apple", top_k=1)
         assert len(hits) <= 1
+
+
+class TestHybridParent:
+    """STEP_032: fuse in child space, generate from parents."""
+
+    def _bundle(self):
+        from finrag.embeddings import MockEmbedder
+        from finrag.retrieval import InMemoryIndex, build_bm25_index
+
+        secs = [_FakeSection("item_7", "MD&A",
+                             "Apple net sales were $383.3B. Gross margin rose. " * 40)]
+        parents, children, _ = build_parent_child_chunks(secs, **_kwargs())
+        emb = MockEmbedder(dim=64)
+        idx = InMemoryIndex()
+        for c in children:
+            idx.add(c, emb.embed(c.text))
+        return {
+            "strategy": "hybrid-parent", "dense": idx,
+            "bm25": build_bm25_index(children),
+            "chunks_by_id": {p.chunk_id: p for p in parents},
+            "children_by_id": {c.chunk_id: c for c in children},
+            "n_chunks": len(parents), "n_child_chunks": len(children),
+            "vectordb_backend": "in-memory", "embedder": emb,
+        }
+
+    def test_returns_parents_not_children(self) -> None:
+        from finrag.retrieval import retrieve_with_strategy
+
+        hits = retrieve_with_strategy(self._bundle(), "Apple net sales", top_k=3)
+        assert hits
+        assert all("::c" not in c.chunk_id for c, _ in hits)
+        assert len({c.chunk_id for c, _ in hits}) == len(hits)
+
+    def test_unknown_child_ids_skipped(self) -> None:
+        from finrag.retrieval import retrieve_with_strategy
+
+        bundle = self._bundle()
+        bundle["children_by_id"] = {}  # fused ids unresolvable -> no crash
+        assert retrieve_with_strategy(bundle, "Apple net sales", top_k=3) == []
