@@ -1,6 +1,6 @@
 # FinRAG — Institutional-Grade Financial Intelligence Platform
 
-> **Production-grade RAG over SEC 10-K filings: hybrid retrieval + re-ranked, cited answers with an auditable experiment ledger. 9 benchmarked experiments, 160 tests, 0 known failures.**
+> **Production-grade RAG over SEC 10-K filings: hybrid retrieval + re-ranked, cited answers with an auditable experiment ledger. 12 benchmarked experiments, 175 tests, 0 known failures.**
 
 ---
 
@@ -33,8 +33,11 @@ Every answer carries chunk-level citations, token counts, and dollar cost. Every
 | exp_022 hybrid + live Qdrant | hybrid | 0.8760 | 0.8979 | 0.8129 | 0.6115 |
 | **exp_030 + Flash re-rank** | hybrid+rerank | **0.9132** | **0.9574** | **0.8849** | **0.7266** |
 | exp_031 MiniLM re-rank | hybrid+rerank | 0.8430 | 0.8887 | 0.7698 | 0.5683 |
+| exp_041 parent-doc | child→parent | 0.7397 | 0.9233 | 0.6978 | 0.5324 |
+| exp_042 hybrid-parent | child-fused | 0.8223 | 0.9190 | 0.8129 | 0.6187 |
+| exp_043 multi-query | dense+expansion | 0.8003 | 0.9199 | 0.7194 | 0.5252 |
 
-Headlines: hybrid sweeps dense/BM25 alone; live Qdrant reproduces brute-force **139/139 exactly** at 30ms p95; Flash re-rank closes the recall↔citation gap (+11.5pp citations) but costs $0.17/run — so rerank is ON for leadership, OFF by default; ms-marco MiniLM **hurts** on 10-K language (retired, honestly). Full story per experiment in `docs/experiments/`; live table in `results/leaderboard.json`.
+Headlines: hybrid sweeps dense/BM25 alone; live Qdrant reproduces brute-force **139/139 exactly** at 30ms p95; Flash re-rank closes the recall↔citation gap (+11.5pp citations) but costs $0.17/run — so rerank is ON for leadership, OFF by default; ms-marco MiniLM **hurts** on 10-K language (retired, honestly); parent-doc hierarchy helps dense (+9.4pp) but ties hybrid exactly at 3× cost (retired); multi-query is noise (retired); Vertex Search measured slower than Qdrant at 13× the latency plus billing (not recommended). Full story per experiment in `docs/experiments/`; live table in `results/leaderboard.json`.
 
 ## Architecture
 
@@ -45,6 +48,8 @@ SEC EDGAR → parse (Item 1/1A/7/7A/8) → naive 512/50 chunks → embed (text-e
                 → hybrid RRF k=60 (top-20 + top-20 → top-5)
                 → optional Flash pointwise re-rank (top-10 → top-5, best-answer mode)
                 → Gemini 2.5 Flash answer with [chunk_id] citations + cost log
+Options (measured, retired unless noted): parent-doc hierarchy, child-space hybrid fusion,
+Flash-vs-MiniLM rerank, multi-query expansion — see experiments table above.
 Eval: frozen 139-Q set → RAGAS + content metrics → results/experiments.csv (append-only)
 Ops: nightly drift guard (make nightly-smoke) vs exp_021 baseline · serve via FastAPI · demo via Streamlit
 ```
@@ -69,7 +74,7 @@ make serve-qdrant     # same, dense side on live Qdrant (needs docker-up)
 make ui               # dashboard at localhost:8501 (needs make serve running)
 
 # 5. Verify + guard
-uv run pytest tests -q          # 160 tests, $0
+uv run pytest tests -q          # 175 tests, $0
 make nightly-smoke              # 10-Q hybrid guard + drift check vs exp_021 (~$0.005)
 ```
 
@@ -82,6 +87,8 @@ api/                     # FastAPI: health / ask(+rerank flag) / leaderboard
 ui/                      # Streamlit dashboard (calls the API)
 finrag/
 ├── chunking.py          # naive / recursive / semantic / structural + dispatch
+├── parentdoc.py         # parent-document hierarchy builder
+├── multiquery.py        # Flash question expansion + cross-formulation fusion
 ├── embeddings.py        # mock (offline) / Vertex text-embedding-005
 ├── retrieval.py         # dense + BM25 + hybrid RRF + strategy dispatch
 ├── rerank.py            # noop / Flash pointwise / MiniLM cross-encoder
@@ -94,11 +101,11 @@ finrag/
 docs/
 ├── 00_overview.md 01_setup.md 02_nightly_ops.md 03_deploy.md
 ├── decisions/           # ADR-001…006 — the why, before the code
-├── experiments/         # exp_001…031 — hypothesis, frozen config, results, analysis
-└── progress/            # STEP_001…027 — bit-by-bit build log (start here to recall anything)
+├── experiments/         # exp_001…043 — hypothesis, frozen config, results, analysis
+└── progress/            # STEP_001…035 — bit-by-bit build log (start here to recall anything)
 results/                 # experiments.csv (append-only) + leaderboard + snapshots + per-Q JSONL
-scripts/                 # check_drift.py, nightly.ps1, benchmark_vectordb.py, vertex auth
-tests/                   # 160 unit tests (offline) + eval harness
+scripts/                 # check_drift.py, nightly.ps1, benchmark_vectordb.py, benchmark_vertex_search.py, vertex auth
+tests/                   # 175 unit tests (offline) + eval harness
 ```
 
 ## Roadmap status (honest)
@@ -107,12 +114,12 @@ tests/                   # 160 unit tests (offline) + eval harness
 |---|---|
 | Foundation (eval set, RAGAS, baseline) | DONE — exp_001 |
 | Chunking (recursive/semantic/structural) | DONE — naive still leads recall; late/contextual deferred (no signal needs them) |
-| Retrieval (BM25 → hybrid RRF) | DONE — hybrid sweeps |
-| Vector DBs (Qdrant ✓, Weaviate measured, Vertex Search deferred to pre-deploy) | DONE for serving |
+| Retrieval (BM25 → hybrid RRF → parent-doc → hybrid-parent → multi-query) | DONE — hybrid sweeps; hierarchy helps (+9.4pp) but ties at 3× cost (retired); expansion is noise (retired) |
+| Vector DBs (Qdrant ✓, Weaviate measured, Vertex Search measured) | DONE for serving — Qdrant stands |
 | Re-rank (Flash wins, MiniLM retired) | DONE |
 | Product (FastAPI + best-answer mode + Streamlit) | DONE |
-| Ops (nightly drift guard) | DONE |
-| Open | Vertex Search benchmark, parent-doc/multi-query retrieval, nightly cron activation, auto-router/semantic cache |
+| Ops (nightly drift guard + deploy guide) | DONE |
+| Open | HyDE / hybrid+multiquery combo (low priority), serving hardening, nightly cron activation, auto-router/semantic cache |
 
 ## Why these choices?
 
@@ -123,7 +130,7 @@ tests/                   # 160 unit tests (offline) + eval harness
 - [ADR-005: Vector-DB benchmark](docs/decisions/adr_005_vectordb_benchmark.md)
 - [ADR-006: Re-rank direction](docs/decisions/adr_006_rerank_direction.md)
 
-New here? Read [`docs/progress/PROGRESS.md`](docs/progress/PROGRESS.md) — the chronological index of all 27 build steps.
+New here? Read [`docs/progress/PROGRESS.md`](docs/progress/PROGRESS.md) — the chronological index of all 35 build steps.
 
 ---
 
