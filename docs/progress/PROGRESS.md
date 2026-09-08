@@ -49,7 +49,7 @@
 | STEP_026 | 2026-09-07 | `ef874f8` API best-answer | API best-answer mode (rerank flag + UI checkbox, 3 tests) — cheap default + flagship per request | `docs/progress/STEP_026_api_best_answer.md` | DONE |
 | STEP_027 | 2026-09-07 | `108f8bf` drift guard | Nightly drift guard (checker + scheduler entry + runbook, 17 tests, live DRIFT-OK) | `docs/progress/STEP_027_nightly_drift_guard.md` | DONE |
 | STEP_028 | 2026-09-07 | `08d2b10` deploy polish | Deploy polish (README sweep table + deploy guide + setup fix) | `docs/progress/STEP_028_deploy_polish.md` | DONE |
-| STEP_029 | 2026-09-08 | PENDING (commit next) | Vertex Search benchmark (p95 412ms FAIL, Qdrant stands, phase closed, GCP empty) | `docs/progress/STEP_029_vertex_search_benchmark.md` | PENDING — ready to commit |
+| STEP_029 | 2026-09-08 | `7a2b447` Vertex Search bench | Vertex Search benchmark (p95 412ms FAIL, Qdrant stands, phase closed, GCP empty) | `docs/progress/STEP_029_vertex_search_benchmark.md` | DONE |
 | STEP_030 | — | — | NEXT: parent-doc retrieval, serving hardening, or README refresh (note: STEP_030 ≠ exp_030_flash_rerank — step numbers and experiment numbers are independent sequences) | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
