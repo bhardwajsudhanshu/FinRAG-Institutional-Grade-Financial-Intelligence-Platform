@@ -61,7 +61,7 @@
 | STEP_038 | 2026-09-08 | `e9ff27f` README refresh | README + deploy refresh (serving profiles, 12-row table, 182 tests) | `docs/progress/STEP_038_readme_deploy_refresh.md` | DONE |
 | STEP_039 | 2026-09-08 | `49a1e03` HyDE + exp_044 | HyDE hypothetical-doc retrieval + exp_044 scaffold (composes with all strategies, smoke 6/6) | `docs/progress/STEP_039_hyde_retrieval.md` | DONE |
 | STEP_040 | 2026-09-08 | `ec78088` exp_044 full run | exp_044 full 139-Q run (HyDE +8 net p~0.10, best dense-only, kept not default) | `docs/progress/STEP_040_exp044_full_run.md` | DONE |
-| STEP_041 | 2026-09-08 | PENDING (commit next) | README refresh (exp_044 row, HyDE kept, 191 tests) | `docs/progress/STEP_041_readme_refresh.md` | PENDING — ready to commit |
+| STEP_041 | 2026-09-08 | `ac3736b` README refresh | README refresh (exp_044 row, HyDE kept, 191 tests) | `docs/progress/STEP_041_readme_refresh.md` | DONE |
 | STEP_042 | — | — | NEXT: readme_table.py generator, serving hardening follow-ups, or hybrid combos | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
