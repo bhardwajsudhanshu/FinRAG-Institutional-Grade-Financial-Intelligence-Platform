@@ -1,6 +1,6 @@
 # FinRAG — Institutional-Grade Financial Intelligence Platform
 
-> **Production-grade RAG over SEC 10-K filings: hybrid retrieval + re-ranked, cited answers with an auditable experiment ledger. 13 benchmarked experiments, 191 tests, 0 known failures.**
+> **Production-grade RAG over SEC 10-K filings: hybrid retrieval + re-ranked, cited answers with an auditable experiment ledger. 13 benchmarked experiments, 201 tests, 0 known failures.**
 
 ---
 
@@ -22,6 +22,7 @@ Every answer carries chunk-level citations, token counts, and dollar cost. Every
 
 139-Q frozen eval set (v1: 67 lookup, 45 section, 9 synthesis, 18 out-of-scope), RAGAS-judged + content-anchored custom metrics:
 
+<!-- RESULTS:START -->
 | Experiment | Retrieval | context_recall | faithfulness | hit@5_content | citation_acc |
 |---|---|---|---|---|---|
 | exp_001 naive baseline | dense | 0.8058 | 0.8847 | — | 0.5612 |
@@ -37,6 +38,7 @@ Every answer carries chunk-level citations, token counts, and dollar cost. Every
 | exp_042 hybrid-parent | child-fused | 0.8223 | 0.9190 | 0.8129 | 0.6187 |
 | exp_043 multi-query | dense+expansion | 0.8003 | 0.9199 | 0.7194 | 0.5252 |
 | exp_044 HyDE | dense+hypothetical | 0.8140 | 0.9024 | 0.7482 | 0.5396 |
+<!-- RESULTS:END -->
 
 Headlines: hybrid sweeps dense/BM25 alone; live Qdrant reproduces brute-force **139/139 exactly** at 30ms p95; Flash re-rank closes the recall↔citation gap (+11.5pp citations) but costs $0.17/run — so rerank is ON for leadership, OFF by default; ms-marco MiniLM **hurts** on 10-K language (retired, honestly); parent-doc hierarchy helps dense (+9.4pp) but ties hybrid exactly at 3× cost (retired); multi-query is noise (retired); HyDE hypothetical docs are suggestive (+8 net, best dense-only) but trail hybrid — kept, not default; Vertex Search measured slower than Qdrant at 13× the latency plus billing (not recommended). Full story per experiment in `docs/experiments/`; live table in `results/leaderboard.json`.
 
@@ -110,11 +112,11 @@ finrag/
 docs/
 ├── 00_overview.md 01_setup.md 02_nightly_ops.md 03_deploy.md
 ├── decisions/           # ADR-001…006 — the why, before the code
-├── experiments/         # exp_001…043 — hypothesis, frozen config, results, analysis
-└── progress/            # STEP_001…040 — bit-by-bit build log (start here to recall anything)
+├── experiments/         # exp_001…044 + vectordb exps (050…052) — hypothesis, frozen config, results, analysis
+└── progress/            # STEP_001…042 — bit-by-bit build log (start here to recall anything)
 results/                 # experiments.csv (append-only) + leaderboard + snapshots + per-Q JSONL
-scripts/                 # check_drift.py, nightly.ps1, build_serve_index.py, benchmark_vectordb.py, benchmark_vertex_search.py, vertex auth
-tests/                   # 191 unit tests (offline) + eval harness
+scripts/                 # readme_table.py, check_drift.py, nightly.ps1, build_serve_index.py, benchmark_vectordb.py, benchmark_vertex_search.py, vertex auth
+tests/                   # 201 unit tests (offline) + eval harness
 ```
 
 ## Roadmap status (honest)

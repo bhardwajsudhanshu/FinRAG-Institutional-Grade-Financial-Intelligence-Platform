@@ -3,7 +3,7 @@
 # All commands assume you're in the project root and have uv installed.
 # The venv lives in .venv/ on F: drive; uv cache at F:/.uv-cache.
 
-.PHONY: help install setup env dev test lint format ingest ingest-sample query eval eval-smoke eval-nightly nightly-smoke drift-check ui serve serve-qdrant docker-up docker-down docker-logs clean vertex-check patch-ragas
+.PHONY: help install setup env dev test lint format ingest ingest-sample query eval eval-smoke eval-nightly nightly-smoke drift-check leaderboard readme-table ui serve serve-qdrant docker-up docker-down docker-logs clean vertex-check patch-ragas
 
 help: ## Show this help
 	@uv run python -c "import re; print('\n'.join(sorted(re.findall(r'^([a-zA-Z_-]+):.*?## (.*)', open('Makefile').read(), re.MULTILINE))))"
@@ -61,6 +61,12 @@ qa-gen: ## Generate the 200-Q eval set (slow, ~80 min on Vertex)
 
 qa-gen-smoke: ## Generate a 2-Q smoke eval set
 	uv run python tests/eval/generate_qa_pairs.py --limit 1 --per-filing 5 --out data/eval/qa_pairs_smoke.jsonl
+
+readme-table: ## Regenerate README results table + counts from results/experiments.csv
+	uv run python scripts/readme_table.py
+
+readme-table-check: ## Fail when README results table + counts are stale
+	uv run python scripts/readme_table.py --check
 
 ui: ## Launch the Streamlit dashboard
 	uv run streamlit run ui/streamlit_app.py
