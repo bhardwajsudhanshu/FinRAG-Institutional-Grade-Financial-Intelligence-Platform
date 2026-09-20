@@ -18,6 +18,9 @@ Design notes:
   match benchmarked behavior by construction.
 - Errors from retrieval/generation surface as 500s with the message only
   (no tracebacks to clients); validation failures are 422s via pydantic.
+- Exact-match answer cache (STEP_045): repeat (strategy, top_k, rerank,
+  normalized question) returns the stored body with latency_ms=0 and
+  `X-Cache: HIT` (MISS on first serve). Per-worker, FIFO-bounded.
 """
 
 from __future__ import annotations
@@ -26,10 +29,11 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from finrag.cache import AnswerCache
 from finrag.config import get_settings
 
 
@@ -73,17 +77,21 @@ class HealthResponse(BaseModel):
 
 def create_app(bundle: dict | None = None, generator: Any | None = None,
                chunk_id_to_text: dict | None = None,
-               reranker: Any | None = None) -> FastAPI:
+               reranker: Any | None = None,
+               cache: AnswerCache | None = None) -> FastAPI:
     """Build the app. Prebuilt args (tests) skip the lifespan index build.
 
     `reranker` (tests) overrides the best-answer scorer; production builds
     a Flash pointwise reranker on first `rerank=true` request (needs GCP).
+    `cache` (tests) overrides the exact-match answer cache; production gets
+    a fresh per-worker AnswerCache (workers are separate processes).
     """
     app = FastAPI(title="FinRAG", version="0.1.0")
     app.state.bundle = bundle
     app.state.generator = generator
     app.state.chunk_id_to_text = chunk_id_to_text or {}
     app.state.reranker = reranker
+    app.state.cache = cache if cache is not None else AnswerCache()
     app.state.meta = {"chunker_strategy": get_settings().chunker_strategy}
 
     @asynccontextmanager
@@ -125,7 +133,7 @@ def create_app(bundle: dict | None = None, generator: Any | None = None,
         )
 
     @app.post("/ask", response_model=AskResponse)
-    def ask(req: AskRequest) -> AskResponse:
+    def ask(req: AskRequest, response: Response) -> AskResponse:
         import time
 
         from finrag.retrieval import results_to_citations, retrieve_with_strategy
@@ -136,6 +144,13 @@ def create_app(bundle: dict | None = None, generator: Any | None = None,
         question = req.question.strip()
         if not question:
             raise HTTPException(status_code=422, detail="question must not be blank")
+        cache = app.state.cache
+        cached = cache.get(b["strategy"], req.top_k, req.rerank, question)
+        if cached is not None:
+            # HIT: same body, zeroed latency (no retrieval/generation ran).
+            # model_copy keeps the stored object immutable for future hits.
+            response.headers["X-Cache"] = "HIT"
+            return cached.model_copy(update={"latency_ms": 0})
         t0 = time.perf_counter()
         reranked = False
         try:
@@ -166,7 +181,7 @@ def create_app(bundle: dict | None = None, generator: Any | None = None,
         except Exception as e:
             logger.warning(f"ask generation failed: {e}")
             raise HTTPException(status_code=500, detail=f"generation failed: {e}") from e
-        return AskResponse(
+        out = AskResponse(
             answer=gen.answer,
             citations=[CitationOut(chunk_id=c.chunk_id, score=c.score,
                                    ticker=str(c.metadata.get("ticker", "")),
@@ -181,6 +196,9 @@ def create_app(bundle: dict | None = None, generator: Any | None = None,
             vectordb_backend=b.get("vectordb_backend", "in-memory"),
             reranked=reranked,
         )
+        cache.put(b["strategy"], req.top_k, req.rerank, question, out)
+        response.headers["X-Cache"] = "MISS"
+        return out
 
     @app.get("/leaderboard")
     def leaderboard() -> dict[str, Any]:

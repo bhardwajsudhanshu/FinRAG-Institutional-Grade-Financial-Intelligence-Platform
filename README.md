@@ -1,6 +1,6 @@
 # FinRAG — Institutional-Grade Financial Intelligence Platform
 
-> **Production-grade RAG over SEC 10-K filings: hybrid retrieval + re-ranked, cited answers with an auditable experiment ledger. 13 benchmarked experiments, 201 tests, 0 known failures.**
+> **Production-grade RAG over SEC 10-K filings: hybrid retrieval + re-ranked, cited answers with an auditable experiment ledger. 13 benchmarked experiments, 211 tests, 0 known failures.**
 
 ---
 
@@ -93,7 +93,7 @@ Two Windows gotchas (both recorded in the build log): delete any machine-level `
 ## Project structure
 
 ```
-api/                     # FastAPI: health / ask(+rerank flag) / leaderboard
+api/                     # FastAPI: health / ask(+rerank flag, X-Cache HIT/MISS) / leaderboard
 ui/                      # Streamlit dashboard (calls the API)
 finrag/
 ├── chunking.py          # naive / recursive / semantic / structural + dispatch
@@ -108,15 +108,16 @@ finrag/
 ├── eval/                # RAGAS runner + content-anchored metrics
 ├── data/                # SEC ingest + 10-K section parser
 ├── cli/                 # ingest / ask / eval CLIs
-└── config.py            # everything ambient, everything overridable
+├── config.py            # everything ambient, everything overridable
+├── cache.py             # exact-match ask cache (per-worker, FIFO-bounded)
 docs/
 ├── 00_overview.md 01_setup.md 02_nightly_ops.md 03_deploy.md
 ├── decisions/           # ADR-001…006 — the why, before the code
 ├── experiments/         # exp_001…044 + vectordb exps (050…052) — hypothesis, frozen config, results, analysis
-└── progress/            # STEP_001…042 — bit-by-bit build log (start here to recall anything)
+└── progress/            # STEP_001…044 — bit-by-bit build log (start here to recall anything)
 results/                 # experiments.csv (append-only) + leaderboard + snapshots + per-Q JSONL
 scripts/                 # readme_table.py, check_drift.py, nightly.ps1, build_serve_index.py, benchmark_vectordb.py, benchmark_vertex_search.py, vertex auth
-tests/                   # 201 unit tests (offline) + eval harness
+tests/                   # 211 unit tests (offline) + eval harness
 ```
 
 ## Roadmap status (honest)
@@ -128,9 +129,9 @@ tests/                   # 201 unit tests (offline) + eval harness
 | Retrieval (BM25 → hybrid → parent-doc → hybrid-parent → multi-query → HyDE) | DONE — hybrid sweeps; hierarchy ties at 3× cost (retired); expansion is noise (retired); HyDE suggestive, kept not default |
 | Vector DBs (Qdrant ✓, Weaviate measured, Vertex Search measured) | DONE for serving — Qdrant stands |
 | Re-rank (Flash wins, MiniLM retired) | DONE |
-| Product (FastAPI + best-answer mode + Streamlit + persistent Qdrant) | DONE — pre-warm once, attach in ~2s; 2-worker fleet verified live (STEP_043) |
+| Product (FastAPI + best-answer mode + Streamlit + persistent Qdrant) | DONE — pre-warm once, attach in ~2s; 2-worker fleet verified live (STEP_043); exact-match ask cache, $0 repeats (STEP_045) |
 | Ops (nightly drift guard + deploy guide) | DONE — Task Scheduler active (daily 02:30, STEP_044) |
-| Open | hybrid+multiquery/HyDE combos (low priority), auto-router/semantic cache |
+| Open | hybrid+multiquery/HyDE combos (low priority), auto-router (exact-match cache done STEP_045) |
 
 ## Why these choices?
 
