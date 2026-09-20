@@ -51,6 +51,9 @@ Thumbs.db
 *.log
 logs/
 
+# Chat UI history (private user conversations, never commit)
+ui/chats/
+
 # Note: results/ and results/leaderboard_snapshots/ are INTENTIONALLY
 # tracked. The append-only ledger of every experiment ever run lives
 # in results/experiments.csv and a per-refresh immutable copy lives

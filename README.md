@@ -1,6 +1,6 @@
 # FinRAG — Institutional-Grade Financial Intelligence Platform
 
-> **Production-grade RAG over SEC 10-K filings: hybrid retrieval + re-ranked, cited answers with an auditable experiment ledger. 15 benchmarked experiments, 221 tests, 0 known failures.**
+> **Production-grade RAG over SEC 10-K filings: hybrid retrieval + re-ranked, cited answers with an auditable experiment ledger. 15 benchmarked experiments, 236 tests, 0 known failures.**
 
 ---
 
@@ -96,7 +96,7 @@ Two Windows gotchas (both recorded in the build log): delete any machine-level `
 
 ```
 api/                     # FastAPI: health / ask(+rerank flag, X-Cache HIT/MISS) / leaderboard
-ui/                      # Streamlit dashboard (calls the API)
+ui/                      # Streamlit chat (sidebar history in ui/chats/, per-chat settings)
 finrag/
 ├── chunking.py          # naive / recursive / semantic / structural + dispatch
 ├── parentdoc.py         # parent-document hierarchy builder
@@ -119,7 +119,7 @@ docs/
 └── progress/            # STEP_001…044 — bit-by-bit build log (start here to recall anything)
 results/                 # experiments.csv (append-only) + leaderboard + snapshots + per-Q JSONL
 scripts/                 # readme_table.py, check_drift.py, nightly.ps1, build_serve_index.py, benchmark_vectordb.py, benchmark_vertex_search.py, vertex auth
-tests/                   # 221 unit tests (offline) + eval harness
+tests/                   # 236 unit tests (offline) + eval harness
 ```
 
 ## Roadmap status (honest)
@@ -131,7 +131,7 @@ tests/                   # 221 unit tests (offline) + eval harness
 | Retrieval (BM25 → hybrid → parent-doc → hybrid-parent → multi-query → HyDE) | DONE — hybrid sweeps; hierarchy ties at 3× cost (retired); expansion is noise (retired); HyDE suggestive, kept not default |
 | Vector DBs (Qdrant ✓, Weaviate measured, Vertex Search measured) | DONE for serving — Qdrant stands |
 | Re-rank (Flash wins, MiniLM retired) | DONE |
-| Product (FastAPI + best-answer mode + Streamlit + persistent Qdrant) | DONE — pre-warm once, attach in ~2s; 2-worker fleet verified live (STEP_043); exact-match ask cache, $0 repeats (STEP_045) |
+| Product (FastAPI + best-answer mode + Streamlit + persistent Qdrant) | DONE — pre-warm once, attach in ~2s; 2-worker fleet verified live (STEP_043); exact-match ask cache, $0 repeats (STEP_045); ChatGPT-style chat UI with persisted history (STEP_048) |
 | Ops (nightly drift guard + deploy guide) | DONE — Task Scheduler active (daily 02:30, STEP_044) |
 | Open | none — roadmap complete (STEP_047); ledger frozen at 15 unless a new idea earns a run |
 
