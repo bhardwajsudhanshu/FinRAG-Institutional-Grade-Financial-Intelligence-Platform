@@ -128,9 +128,9 @@ tests/                   # 201 unit tests (offline) + eval harness
 | Retrieval (BM25 → hybrid → parent-doc → hybrid-parent → multi-query → HyDE) | DONE — hybrid sweeps; hierarchy ties at 3× cost (retired); expansion is noise (retired); HyDE suggestive, kept not default |
 | Vector DBs (Qdrant ✓, Weaviate measured, Vertex Search measured) | DONE for serving — Qdrant stands |
 | Re-rank (Flash wins, MiniLM retired) | DONE |
-| Product (FastAPI + best-answer mode + Streamlit + persistent Qdrant) | DONE — pre-warm once, attach in ~2s |
+| Product (FastAPI + best-answer mode + Streamlit + persistent Qdrant) | DONE — pre-warm once, attach in ~2s; 2-worker fleet verified live (STEP_043) |
 | Ops (nightly drift guard + deploy guide) | DONE |
-| Open | hybrid+multiquery/HyDE combos (low priority), multi-worker fleet, nightly cron activation, auto-router/semantic cache |
+| Open | hybrid+multiquery/HyDE combos (low priority), nightly cron activation, auto-router/semantic cache |
 
 ## Why these choices?
 
