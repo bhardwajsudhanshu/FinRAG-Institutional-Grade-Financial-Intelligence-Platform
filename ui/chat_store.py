@@ -113,3 +113,45 @@ def append_turn(chat: dict, role: str, content: str,
     if role == "user" and chat.get("title") in (None, "", "New chat"):
         chat["title"] = title_for(content)
     return chat
+
+
+def rename_chat(chat: dict, new_title: str) -> dict:
+    """Rename in place. Blank titles raise (the caller decides UI wording) —
+    silently keeping a stale title would confuse the sidebar."""
+    title = " ".join(new_title.split())
+    if not title:
+        raise ValueError("chat title must not be blank")
+    if len(title) > 80:
+        title = title[:80].rsplit(" ", 1)[0] or title[:80]
+    chat["title"] = title
+    return chat
+
+
+def search_chats(chats_dir: Path, query: str) -> list[dict]:
+    """Case-insensitive substring search over titles + message contents.
+    Returns newest-first summaries (same shape as list_chats). Blank query
+    lists everything — the sidebar search box degrades to the full list."""
+    if not query.strip():
+        return list_chats(chats_dir)
+    if not chats_dir.exists():
+        return []
+    needle = query.casefold()
+    hits = []
+    for path in chats_dir.glob("*.json"):
+        try:
+            chat = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, KeyError, UnicodeDecodeError):
+            continue
+        texts = [str(chat.get("title", ""))]
+        for msg in chat.get("messages", []):
+            texts.append(str(msg.get("content", "")))
+        if any(needle in t.casefold() for t in texts):
+            try:
+                hits.append({"id": chat["id"],
+                             "title": chat.get("title", "Untitled"),
+                             "updated_at": chat.get("updated_at", ""),
+                             "n_messages": len(chat.get("messages", []))})
+            except KeyError:
+                continue
+    hits.sort(key=lambda s: s["updated_at"], reverse=True)
+    return hits

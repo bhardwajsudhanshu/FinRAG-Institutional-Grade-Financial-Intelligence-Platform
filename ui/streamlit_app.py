@@ -25,7 +25,23 @@ def api_url() -> str:
 
 def query_api(question: str, top_k: int = 5, rerank: bool = False,
               timeout_s: float = 180.0) -> dict:
-    """POST /ask. Raises RuntimeError with a human message on any failure."""
+    """POST /ask. Raises RuntimeError with a human message on any failure.
+
+    Signature frozen (tests pin it) — use query_api_with_cache when you
+    also need the X-Cache HIT/MISS badge.
+    """
+    body, _ = query_api_with_cache(question, top_k=top_k, rerank=rerank,
+                                   timeout_s=timeout_s)
+    return body
+
+
+def query_api_with_cache(question: str, top_k: int = 5, rerank: bool = False,
+                         timeout_s: float = 180.0) -> tuple[dict, str]:
+    """POST /ask, returning (body, X-Cache status).
+
+    Status is "HIT" / "MISS" from the API (STEP_045), or "unknown" when the
+    header is absent (older server). Same errors as query_api.
+    """
     try:
         resp = httpx.post(f"{api_url()}/ask",
                           json={"question": question, "top_k": top_k, "rerank": rerank},
@@ -40,7 +56,7 @@ def query_api(question: str, top_k: int = 5, rerank: bool = False,
         raise RuntimeError("Please enter a question (1-2000 chars) and top_k 1-20.")
     if resp.status_code != 200:
         raise RuntimeError(f"API error {resp.status_code}: {resp.text[:200]}")
-    return resp.json()
+    return resp.json(), resp.headers.get("X-Cache", "unknown")
 
 
 def fetch_health(timeout_s: float = 5.0) -> dict | None:
@@ -75,7 +91,9 @@ def main() -> None:
         list_chats,
         load_chat,
         new_chat,
+        rename_chat,
         save_chat,
+        search_chats,
     )
 
     st.set_page_config(page_title="FinRAG", layout="wide")
@@ -99,7 +117,11 @@ def main() -> None:
         if st.button("+ New chat", use_container_width=True):
             open_chat(None)
             st.rerun()
-        for summary in list_chats(DEFAULT_DIR):
+        query = st.text_input("Search chats", value="", placeholder="title or words…")
+        summaries = search_chats(DEFAULT_DIR, query) if query.strip() else list_chats(DEFAULT_DIR)
+        if query.strip() and not summaries:
+            st.caption("No matches.")
+        for summary in summaries:
             label = summary["title"]
             if summary["n_messages"]:
                 label += f" ({summary['n_messages']})"
@@ -111,10 +133,25 @@ def main() -> None:
                 open_chat(summary["id"])
                 st.rerun()
         st.divider()
-        if st.session_state.chat_id and st.button("Delete this chat"):
-            delete_chat(DEFAULT_DIR, st.session_state.chat_id)
-            open_chat(None)
-            st.rerun()
+        if st.session_state.chat_id:
+            if st.button("Delete this chat"):
+                delete_chat(DEFAULT_DIR, st.session_state.chat_id)
+                open_chat(None)
+                st.rerun()
+            with st.expander("Rename this chat"):
+                new_title = st.text_input("New title", value="",
+                                          placeholder="e.g. Q3 margins deep dive",
+                                          key="rename-input")
+                if st.button("Save name"):
+                    try:
+                        assert st.session_state.chat is not None
+                        rename_chat(st.session_state.chat, new_title)
+                        save_chat(DEFAULT_DIR, st.session_state.chat)
+                        st.rerun()
+                    except ValueError:
+                        st.warning("Title must not be blank.")
+                    except AssertionError:
+                        st.warning("Open a chat first.")
         st.divider()
         st.header("Settings")
         top_k = st.slider("Top-K chunks", min_value=1, max_value=20, value=5)
@@ -155,7 +192,8 @@ def main() -> None:
         with st.chat_message("assistant"):
             with st.spinner("Retrieving + generating…"):
                 try:
-                    res = query_api(question, top_k=top_k, rerank=rerank)
+                    res, cache_status = query_api_with_cache(
+                        question, top_k=top_k, rerank=rerank)
                 except RuntimeError as e:
                     st.error(str(e))
                     chat["messages"].pop()  # don't persist failed turns
@@ -163,6 +201,9 @@ def main() -> None:
                         save_chat(DEFAULT_DIR, chat)
                         st.session_state.chat_id = chat["id"]
                     return
+            cached = cache_status == "HIT"
+            if cached:
+                st.caption("⚡ served from cache — $0, no retrieval ran")
             st.write(res.get("answer", ""))
             msg_meta = _render_answer_meta({
                 "citations": res.get("citations", []),
@@ -173,6 +214,7 @@ def main() -> None:
                     "cost_usd": res.get("cost_usd", 0.0),
                     "latency_ms": res.get("latency_ms", 0),
                     "reranked": bool(res.get("reranked")),
+                    "cached": cached,
                 },
             })
         append_turn(chat, "assistant", res.get("answer", ""),
@@ -205,7 +247,8 @@ def _render_answer_meta(msg: dict) -> dict:
     st.caption(f"Model {meta.get('model', '?')} · "
                f"{meta.get('input_tokens', 0)} in / {meta.get('output_tokens', 0)} out · "
                f"${float(meta.get('cost_usd', 0.0)):.4f} · {meta.get('latency_ms', 0)}ms"
-               + (" · re-ranked" if meta.get("reranked") else ""))
+               + (" · re-ranked" if meta.get("reranked") else "")
+               + (" · ⚡cached" if meta.get("cached") else ""))
     return meta
 
 

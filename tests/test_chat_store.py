@@ -19,7 +19,9 @@ from ui.chat_store import (
     list_chats,
     load_chat,
     new_chat,
+    rename_chat,
     save_chat,
+    search_chats,
     title_for,
 )
 
@@ -110,3 +112,53 @@ class TestAppendTurn:
     def test_bad_role_rejected(self) -> None:
         with pytest.raises(ValueError):
             append_turn(new_chat(), "system", "x")
+
+
+class TestRename:
+    def test_rename(self, tmp_path: Path) -> None:
+        chat = new_chat()
+        append_turn(chat, "user", "Revenue?")
+        rename_chat(chat, "  Q3 deep dive  ")
+        assert chat["title"] == "Q3 deep dive"
+        save_chat(tmp_path, chat)
+        assert load_chat(tmp_path, chat["id"])["title"] == "Q3 deep dive"
+
+    def test_blank_rejected(self) -> None:
+        with pytest.raises(ValueError):
+            rename_chat(new_chat(), "   ")
+
+    def test_long_title_cut_at_word(self) -> None:
+        chat = rename_chat(new_chat(), "x" * 30 + " " + "y" * 60)
+        assert chat["title"] == "x" * 30  # cut back to the word boundary
+
+
+class TestSearch:
+    def _seed(self, tmp_path: Path) -> None:
+        a = new_chat()
+        append_turn(a, "user", "What was Apple revenue?")
+        append_turn(a, "assistant", "383B", citations=[], meta={})
+        save_chat(tmp_path, a)
+        b = new_chat()
+        append_turn(b, "user", "Microsoft Azure growth?")
+        save_chat(tmp_path, b)
+
+    def test_finds_in_messages(self, tmp_path: Path) -> None:
+        self._seed(tmp_path)
+        hits = search_chats(tmp_path, "azure")
+        assert len(hits) == 1
+        assert hits[0]["title"] == "Microsoft Azure growth?"
+
+    def test_case_insensitive_title(self, tmp_path: Path) -> None:
+        self._seed(tmp_path)
+        assert len(search_chats(tmp_path, "APPLE")) == 1
+
+    def test_no_match(self, tmp_path: Path) -> None:
+        self._seed(tmp_path)
+        assert search_chats(tmp_path, "tesla") == []
+
+    def test_blank_query_lists_all(self, tmp_path: Path) -> None:
+        self._seed(tmp_path)
+        assert len(search_chats(tmp_path, "   ")) == 2
+
+    def test_missing_dir(self, tmp_path: Path) -> None:
+        assert search_chats(tmp_path / "nope", "x") == []

@@ -12,14 +12,22 @@ if str(_ROOT) not in sys.path:
 
 import httpx
 
-from ui.streamlit_app import api_url, fetch_health, fetch_leaderboard_winners, query_api
+from ui.streamlit_app import (
+    api_url,
+    fetch_health,
+    fetch_leaderboard_winners,
+    query_api,
+    query_api_with_cache,
+)
 
 
 class _Resp:
-    def __init__(self, status_code: int, payload: dict | str = "") -> None:
+    def __init__(self, status_code: int, payload: dict | str = "",
+                 headers: dict | None = None) -> None:
         self.status_code = status_code
         self._payload = payload
         self.text = payload if isinstance(payload, str) else ""
+        self.headers = headers or {}
 
     def json(self):
         if isinstance(self._payload, dict):
@@ -84,6 +92,29 @@ class TestQueryApi:
             raise AssertionError("should have raised")
         except RuntimeError as e:
             assert "500" in str(e)
+
+
+class TestQueryApiCache:
+    def test_hit_and_miss_badges(self, monkeypatch) -> None:
+        payload = {"answer": "A", "citations": []}
+        monkeypatch.setattr(httpx, "post",
+                            lambda *a, **k: _Resp(200, payload, {"X-Cache": "HIT"}))
+        body, status = query_api_with_cache("Revenue?")
+        assert body == payload
+        assert status == "HIT"
+        monkeypatch.setattr(httpx, "post",
+                            lambda *a, **k: _Resp(200, payload, {"X-Cache": "MISS"}))
+        assert query_api_with_cache("Revenue?")[1] == "MISS"
+
+    def test_missing_header_is_unknown(self, monkeypatch) -> None:
+        monkeypatch.setattr(httpx, "post", lambda *a, **k: _Resp(200, {}))
+        assert query_api_with_cache("Revenue?")[1] == "unknown"
+
+    def test_query_api_still_returns_body_only(self, monkeypatch) -> None:
+        payload = {"answer": "A"}
+        monkeypatch.setattr(httpx, "post",
+                            lambda *a, **k: _Resp(200, payload, {"X-Cache": "HIT"}))
+        assert query_api("Revenue?") == payload
 
 
 class TestHealth:

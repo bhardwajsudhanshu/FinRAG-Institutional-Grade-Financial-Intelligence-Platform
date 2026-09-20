@@ -1,6 +1,6 @@
 # FinRAG — Institutional-Grade Financial Intelligence Platform
 
-> **Production-grade RAG over SEC 10-K filings: hybrid retrieval + re-ranked, cited answers with an auditable experiment ledger. 15 benchmarked experiments, 236 tests, 0 known failures.**
+> **Production-grade RAG over SEC 10-K filings: hybrid retrieval + re-ranked, cited answers with an auditable experiment ledger. 15 benchmarked experiments, 247 tests, 0 known failures.**
 
 ---
 
@@ -96,7 +96,7 @@ Two Windows gotchas (both recorded in the build log): delete any machine-level `
 
 ```
 api/                     # FastAPI: health / ask(+rerank flag, X-Cache HIT/MISS) / leaderboard
-ui/                      # Streamlit chat (sidebar history in ui/chats/, per-chat settings)
+ui/                      # Streamlit chat (sidebar history + search + rename in ui/chats/, per-chat settings, X-Cache badge)
 finrag/
 ├── chunking.py          # naive / recursive / semantic / structural + dispatch
 ├── parentdoc.py         # parent-document hierarchy builder
@@ -119,7 +119,7 @@ docs/
 └── progress/            # STEP_001…044 — bit-by-bit build log (start here to recall anything)
 results/                 # experiments.csv (append-only) + leaderboard + snapshots + per-Q JSONL
 scripts/                 # readme_table.py, check_drift.py, nightly.ps1, build_serve_index.py, benchmark_vectordb.py, benchmark_vertex_search.py, vertex auth
-tests/                   # 236 unit tests (offline) + eval harness
+tests/                   # 247 unit tests (offline) + eval harness
 ```
 
 ## Roadmap status (honest)
