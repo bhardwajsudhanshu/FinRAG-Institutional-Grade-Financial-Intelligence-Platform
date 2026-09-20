@@ -67,7 +67,7 @@
 | STEP_044 | 2026-09-20 | `248b1e6` nightly cron | Nightly cron activated (task registered, payload DRIFT-OK live) | `docs/progress/STEP_044_nightly_cron.md` | DONE |
 | STEP_045 | 2026-09-20 | `627aa8a` ask cache | Exact-match ask cache ($0 repeats, 211 tests) | `docs/progress/STEP_045_ask_cache.md` | DONE |
 | STEP_046 | 2026-09-20 | `366b9c7` router measured (+`87c8a4f` snapshot) | Snapshot 87c8a4f + auto-router measured (heuristic loses, 221 tests) | `docs/progress/STEP_046_router_measured.md` | DONE |
-| STEP_047 | — | — | NEXT: hybrid combos (low-pri) — or declare complete | TBD | TODO |
+| STEP_047 | 2026-09-20 | PENDING (commit next) | Hybrid combos measured (both retire, roadmap complete, 15 rows) | `docs/progress/STEP_047_hybrid_combos.md` | PENDING — ready to commit |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
 ## Current headline numbers (frozen)

@@ -1,6 +1,6 @@
 # FinRAG — Institutional-Grade Financial Intelligence Platform
 
-> **Production-grade RAG over SEC 10-K filings: hybrid retrieval + re-ranked, cited answers with an auditable experiment ledger. 13 benchmarked experiments, 221 tests, 0 known failures.**
+> **Production-grade RAG over SEC 10-K filings: hybrid retrieval + re-ranked, cited answers with an auditable experiment ledger. 15 benchmarked experiments, 221 tests, 0 known failures.**
 
 ---
 
@@ -38,6 +38,8 @@ Every answer carries chunk-level citations, token counts, and dollar cost. Every
 | exp_042 hybrid-parent | child-fused | 0.8223 | 0.9190 | 0.8129 | 0.6187 |
 | exp_043 multi-query | dense+expansion | 0.8003 | 0.9199 | 0.7194 | 0.5252 |
 | exp_044 HyDE | dense+hypothetical | 0.8140 | 0.9024 | 0.7482 | 0.5396 |
+| exp_045 hybrid+multiquery | hybrid+expansion | 0.8471 | 0.9286 | 0.7842 | 0.5755 |
+| exp_046 hybrid+HyDE | hybrid+hypothetical | 0.8636 | 0.8763 | 0.8058 | 0.5971 |
 <!-- RESULTS:END -->
 
 Headlines: hybrid sweeps dense/BM25 alone; live Qdrant reproduces brute-force **139/139 exactly** at 30ms p95; Flash re-rank closes the recall↔citation gap (+11.5pp citations) but costs $0.17/run — so rerank is ON for leadership, OFF by default; ms-marco MiniLM **hurts** on 10-K language (retired, honestly); parent-doc hierarchy helps dense (+9.4pp) but ties hybrid exactly at 3× cost (retired); multi-query is noise (retired); HyDE hypothetical docs are suggestive (+8 net, best dense-only) but trail hybrid — kept, not default; Vertex Search measured slower than Qdrant at 13× the latency plus billing (not recommended). Full story per experiment in `docs/experiments/`; live table in `results/leaderboard.json`.
@@ -113,7 +115,7 @@ finrag/
 docs/
 ├── 00_overview.md 01_setup.md 02_nightly_ops.md 03_deploy.md
 ├── decisions/           # ADR-001…006 — the why, before the code
-├── experiments/         # exp_001…044 + vectordb exps (050…052) — hypothesis, frozen config, results, analysis
+├── experiments/         # exp_001…046 + vectordb exps (050…052) — hypothesis, frozen config, results, analysis
 └── progress/            # STEP_001…044 — bit-by-bit build log (start here to recall anything)
 results/                 # experiments.csv (append-only) + leaderboard + snapshots + per-Q JSONL
 scripts/                 # readme_table.py, check_drift.py, nightly.ps1, build_serve_index.py, benchmark_vectordb.py, benchmark_vertex_search.py, vertex auth
@@ -131,7 +133,7 @@ tests/                   # 221 unit tests (offline) + eval harness
 | Re-rank (Flash wins, MiniLM retired) | DONE |
 | Product (FastAPI + best-answer mode + Streamlit + persistent Qdrant) | DONE — pre-warm once, attach in ~2s; 2-worker fleet verified live (STEP_043); exact-match ask cache, $0 repeats (STEP_045) |
 | Ops (nightly drift guard + deploy guide) | DONE — Task Scheduler active (daily 02:30, STEP_044) |
-| Open | hybrid+multiquery/HyDE combos (low priority), auto-router (measured: heuristic loses to hybrid-always, not wired — STEP_046) |
+| Open | none — roadmap complete (STEP_047); ledger frozen at 15 unless a new idea earns a run |
 
 ## Why these choices?
 

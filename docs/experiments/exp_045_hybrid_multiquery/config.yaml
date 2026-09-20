@@ -1,0 +1,38 @@
+exp_name: exp_045_hybrid_multiquery
+description: Flash paraphrases (3) + original, each retrieved over hybrid (dense+BM25 RRF), RRF-fused. One variable vs exp_021 (expansion on/off on the hybrid base).
+
+chunker:
+  type: naive_fixed
+  size: 512
+  overlap: 50
+  tokenizer: cl100k_base
+
+embedder:
+  backend: vertex
+  model: text-embedding-005
+  dim: 768
+
+retrieval:
+  strategy: hybrid
+  top_k: 5
+
+multiquery:
+  enabled: true
+  paraphrases: 3
+  model: gemini-2.5-flash
+  fusion: RRF k=60 over 4 hybrid rankings
+
+generator:
+  backend: vertex
+  model: gemini-2.5-flash
+  temperature: 0.0
+
+ragas_judge:
+  llm: gemini-2.5-flash
+  embeddings: text-embedding-005
+
+eval_set:
+  path: data/eval/qa_pairs.jsonl
+  version: v1
+  n_questions: 139
+  n_filings: 20

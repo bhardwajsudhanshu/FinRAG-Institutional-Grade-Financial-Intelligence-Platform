@@ -46,6 +46,8 @@ EXP_META: dict[str, tuple[str, str]] = {
     "exp_042_hybrid_parent": ("exp_042 hybrid-parent", "child-fused"),
     "exp_043_multi_query": ("exp_043 multi-query", "dense+expansion"),
     "exp_044_hyde": ("exp_044 HyDE", "dense+hypothetical"),
+    "exp_045_hybrid_multiquery": ("exp_045 hybrid+multiquery", "hybrid+expansion"),
+    "exp_046_hybrid_hyde": ("exp_046 hybrid+HyDE", "hybrid+hypothetical"),
 }
 
 COLUMNS = ["context_recall", "faithfulness", "hit_at_5_content", "citation_accuracy"]
