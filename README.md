@@ -129,8 +129,8 @@ tests/                   # 201 unit tests (offline) + eval harness
 | Vector DBs (Qdrant ✓, Weaviate measured, Vertex Search measured) | DONE for serving — Qdrant stands |
 | Re-rank (Flash wins, MiniLM retired) | DONE |
 | Product (FastAPI + best-answer mode + Streamlit + persistent Qdrant) | DONE — pre-warm once, attach in ~2s; 2-worker fleet verified live (STEP_043) |
-| Ops (nightly drift guard + deploy guide) | DONE |
-| Open | hybrid+multiquery/HyDE combos (low priority), nightly cron activation, auto-router/semantic cache |
+| Ops (nightly drift guard + deploy guide) | DONE — Task Scheduler active (daily 02:30, STEP_044) |
+| Open | hybrid+multiquery/HyDE combos (low priority), auto-router/semantic cache |
 
 ## Why these choices?
 

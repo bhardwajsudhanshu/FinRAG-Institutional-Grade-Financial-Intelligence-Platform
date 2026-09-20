@@ -64,7 +64,8 @@
 | STEP_041 | 2026-09-08 | `ac3736b` README refresh | README refresh (exp_044 row, HyDE kept, 191 tests) | `docs/progress/STEP_041_readme_refresh.md` | DONE |
 | STEP_042 | 2026-09-19 | `23eecb6` readme_table.py generator | readme_table.py generator + Makefile targets (table FRESH, 201 tests) | `docs/progress/STEP_042_readme_generator.md` | DONE |
 | STEP_043 | 2026-09-20 | `8464fd1` 2-worker fleet live | 2-worker fleet live (attach both workers, concurrent cited asks, Vertex key fixed) | `docs/progress/STEP_043_fleet_live.md` | DONE |
-| STEP_044 | — | — | NEXT: Open roadmap only (hybrid combos low-pri, nightly cron, auto-router/semantic cache) | TBD | TODO |
+| STEP_044 | 2026-09-20 | PENDING (commit next) | Nightly cron activated (task registered, payload DRIFT-OK live) | `docs/progress/STEP_044_nightly_cron.md` | PENDING — ready to commit |
+| STEP_045 | — | — | NEXT: Open roadmap only (hybrid combos low-pri, auto-router/semantic cache) | TBD | TODO |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
 ## Current headline numbers (frozen)

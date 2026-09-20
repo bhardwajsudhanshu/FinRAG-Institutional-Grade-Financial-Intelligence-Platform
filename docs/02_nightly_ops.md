@@ -46,11 +46,11 @@ Full 139-Q power: 5pp+ decay on any tracked metric breaches.
 
 ## Scheduling
 
-**Windows Task Scheduler** (this machine):
-1. Task Scheduler → Create Task → Triggers: Daily 02:00.
-2. Action: `powershell.exe -ExecutionPolicy Bypass -File <project>/scripts/nightly.ps1`
-   (provided — runs `make nightly-smoke`, logs to `logs/nightly.log`, exit code mirrors drift).
-3. Conditions: Wake to run; stop if running > 1h. History enabled to audit.
+**Windows Task Scheduler** (this machine — ACTIVE since STEP_044, task `FinRAG-nightly-smoke`, daily 02:30):
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/register_nightly_task.ps1  # idempotent; run once from an admin prompt
+```
+What it registers: action `powershell.exe -ExecutionPolicy Bypass -File <project>/scripts/nightly.ps1`, wake-to-run, 1h cap, exit code mirrors drift (History shows verdicts). Disable: `Disable-ScheduledTask -TaskName FinRAG-nightly-smoke`; remove: `Unregister-ScheduledTask -TaskName FinRAG-nightly-smoke -Confirm:$false`. (Manual path it replaces: Task Scheduler → Create Task → Daily 02:00 trigger → same action → wake/stop conditions.)
 
 **cron** (Linux/macOS): `0 2 * * * cd <project> && make nightly-smoke >> logs/nightly.log 2>&1`
 
