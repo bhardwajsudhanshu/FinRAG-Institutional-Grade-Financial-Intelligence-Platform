@@ -1,6 +1,6 @@
 # FinRAG — Institutional-Grade Financial Intelligence Platform
 
-> **Production-grade RAG over SEC 10-K filings: hybrid retrieval + re-ranked, cited answers with an auditable experiment ledger. 13 benchmarked experiments, 211 tests, 0 known failures.**
+> **Production-grade RAG over SEC 10-K filings: hybrid retrieval + re-ranked, cited answers with an auditable experiment ledger. 13 benchmarked experiments, 221 tests, 0 known failures.**
 
 ---
 
@@ -117,7 +117,7 @@ docs/
 └── progress/            # STEP_001…044 — bit-by-bit build log (start here to recall anything)
 results/                 # experiments.csv (append-only) + leaderboard + snapshots + per-Q JSONL
 scripts/                 # readme_table.py, check_drift.py, nightly.ps1, build_serve_index.py, benchmark_vectordb.py, benchmark_vertex_search.py, vertex auth
-tests/                   # 211 unit tests (offline) + eval harness
+tests/                   # 221 unit tests (offline) + eval harness
 ```
 
 ## Roadmap status (honest)
@@ -131,7 +131,7 @@ tests/                   # 211 unit tests (offline) + eval harness
 | Re-rank (Flash wins, MiniLM retired) | DONE |
 | Product (FastAPI + best-answer mode + Streamlit + persistent Qdrant) | DONE — pre-warm once, attach in ~2s; 2-worker fleet verified live (STEP_043); exact-match ask cache, $0 repeats (STEP_045) |
 | Ops (nightly drift guard + deploy guide) | DONE — Task Scheduler active (daily 02:30, STEP_044) |
-| Open | hybrid+multiquery/HyDE combos (low priority), auto-router (exact-match cache done STEP_045) |
+| Open | hybrid+multiquery/HyDE combos (low priority), auto-router (measured: heuristic loses to hybrid-always, not wired — STEP_046) |
 
 ## Why these choices?
 
