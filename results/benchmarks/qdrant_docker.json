@@ -1,0 +1,17 @@
+{
+  "n_chunks": 4447,
+  "n_questions": 139,
+  "qdrant_location": "http://localhost:6333",
+  "embedder": "MockEmbedder",
+  "upsert_s": 8.97,
+  "in_memory": {
+    "p50_ms": 1436.2,
+    "p95_ms": 1951.97
+  },
+  "qdrant": {
+    "p50_ms": 11.74,
+    "p95_ms": 30.46
+  },
+  "parity_top1_rate": 1.0,
+  "parity_set_overlap_mean": 1.0
+}

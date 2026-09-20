@@ -1,0 +1,17 @@
+{
+  "n_chunks": 4447,
+  "n_questions": 139,
+  "qdrant_location": ":memory:",
+  "embedder": "MockEmbedder",
+  "upsert_s": 6.88,
+  "in_memory": {
+    "p50_ms": 1349.7,
+    "p95_ms": 1633.3
+  },
+  "qdrant": {
+    "p50_ms": 34.75,
+    "p95_ms": 41.78
+  },
+  "parity_top1_rate": 1.0,
+  "parity_set_overlap_mean": 1.0
+}

@@ -1,0 +1,21 @@
+{
+  "n_chunks": 4447,
+  "n_questions": 139,
+  "backend": "vertex-vector-search",
+  "machine_type": "e2-standard-2",
+  "index": "finrag-bench-index-20260908-063336",
+  "endpoint": "finrag-bench-endpoint-20260908-063336",
+  "deploy_s": 1945.8,
+  "upsert_s": 394.2,
+  "wall_s": 2576.2,
+  "in_memory": {
+    "p50_ms": 668.25,
+    "p95_ms": 851.29
+  },
+  "store": {
+    "p50_ms": 328.22,
+    "p95_ms": 411.88
+  },
+  "parity_top1_rate": 1.0,
+  "parity_set_overlap_mean": 1.0
+}

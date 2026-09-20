@@ -1,0 +1,2 @@
+exp_name,timestamp,n_questions,n_filings,n_chunks,context_recall,faithfulness,answer_relevancy,hit_at_5,citation_accuracy,mean_latency_ms,total_cost_usd,hit_at_5_content,citation_accuracy_content
+exp_043_multi_query,2026-09-08T10:26:22,6,1,97,1.0,0.9333333333333333,0.7744282569350982,0.8333333333333334,0.8333333333333334,19349.5,0.001712325,1.0,1.0

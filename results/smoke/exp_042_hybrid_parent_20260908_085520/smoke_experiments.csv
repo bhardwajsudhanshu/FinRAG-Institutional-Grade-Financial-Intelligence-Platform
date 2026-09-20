@@ -1,0 +1,2 @@
+exp_name,timestamp,n_questions,n_filings,n_chunks,context_recall,faithfulness,answer_relevancy,hit_at_5,citation_accuracy,mean_latency_ms,total_cost_usd,hit_at_5_content,citation_accuracy_content
+exp_042_hybrid_parent,2026-09-08T08:57:33,6,1,97,1.0,0.9714285714285713,0.7823460375229397,0.8333333333333334,0.8333333333333334,6206.666666666667,0.0016463250000000001,1.0,1.0
