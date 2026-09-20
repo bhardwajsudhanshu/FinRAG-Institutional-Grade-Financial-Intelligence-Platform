@@ -69,7 +69,7 @@
 | STEP_046 | 2026-09-20 | `366b9c7` router measured (+`87c8a4f` snapshot) | Snapshot 87c8a4f + auto-router measured (heuristic loses, 221 tests) | `docs/progress/STEP_046_router_measured.md` | DONE |
 | STEP_047 | 2026-09-20 | `2124cea` hybrid combos | Hybrid combos measured (both retire, roadmap complete, 15 rows) | `docs/progress/STEP_047_hybrid_combos.md` | DONE — roadmap EMPTY, project complete |
 | STEP_048 | 2026-09-20 | `bca0dbe` chat UI | ChatGPT-style chat UI (sidebar history, 236 tests) | `docs/progress/STEP_048_chat_ui.md` | DONE |
-| STEP_049 | 2026-09-20 | PENDING (commit next) | Chat upgrades (rename, search, cache badge, 247 tests) | `docs/progress/STEP_049_chat_upgrades.md` | PENDING — ready to commit |
+| STEP_049 | 2026-09-20 | `32a2277` chat upgrades | Chat upgrades (rename, search, cache badge, 247 tests) | `docs/progress/STEP_049_chat_upgrades.md` | DONE |
 | STEP_011 | — | — | NEXT: exp_004 full 139-Q run + analysis + leaderboard | TBD | TODO |
 
 ## Current headline numbers (frozen)
